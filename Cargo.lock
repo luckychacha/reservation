@@ -3,13 +3,13 @@
 version = 3
 
 [[package]]
-name = "abi"
+name = "luckychacha-reservation-abi"
+version = "0.1.0"
+
+[[package]]
+name = "luckychacha-reservation-service"
 version = "0.1.0"
 
 [[package]]
 name = "reservation"
-version = "0.1.0"
-
-[[package]]
-name = "service"
 version = "0.1.0"
