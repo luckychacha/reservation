@@ -7,5 +7,6 @@ fn main() {
         .unwrap();
 
     Command::new("cargo").args(&["fmt"]).output().unwrap();
+
     println!("cargo:rerun-if-changed=protos/reservation.proto");
 }
