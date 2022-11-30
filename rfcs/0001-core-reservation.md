@@ -101,7 +101,7 @@ message QueryRequest {
 
 message ListenRequest {}
 message ListenResponse {
-    int8 op = 1;
+    ReservationUpdateType op = 1;
     Reservation reservation = 2;
 }
 
