@@ -17,3 +17,5 @@
 // 4.run xxx.up.sql or xxx.down.sql
 // sqlx migrate run
 // sqlx migrate revert
+
+// psql -d reservation / pgcli -d reservation

@@ -1,6 +1,4 @@
-CREATE SCHEMA rsvp;
 CREATE TYPE rsvp.reservation_status AS ENUM('unknown', 'pending', 'confirmed', 'blocked');
-CREATE TYPE rsvp.reservation_update_type AS ENUM('unknown', 'pending', 'confirmed', 'blocked');
 
 CREATE TABLE rsvp.reservation (
                                   id uuid NOT NULL DEFAULT uuid_generate_v4(),
