@@ -14,5 +14,6 @@
 // rm /usr/local/var/postgresql@11/postmaster.pid
 // brew services restart postgresql
 
-// 4.run xxx.up.sql
+// 4.run xxx.up.sql or xxx.down.sql
 // sqlx migrate run
+// sqlx migrate revert
