@@ -750,7 +750,10 @@ dependencies = [
 name = "luckychacha-reservation"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "luckychacha-reservation-abi",
  "sqlx",
+ "thiserror",
 ]
 
 [[package]]

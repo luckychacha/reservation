@@ -19,3 +19,37 @@
 // sqlx migrate revert
 
 // psql -d reservation / pgcli -d reservation
+mod error;
+
+use async_trait::async_trait;
+pub use error::ReservationError;
+
+pub type ReservationId = String;
+// pub type UserId = String;
+// pub type ResourceId = String;
+
+#[async_trait]
+pub trait Rsvp {
+    async fn reserve(
+        &self,
+        rsvp: luckychacha_reservation_abi::Reservation,
+    ) -> Result<luckychacha_reservation_abi::Reservation, ReservationError>;
+
+    async fn change_status(
+        &self,
+        id: ReservationId,
+    ) -> Result<luckychacha_reservation_abi::Reservation, ReservationError>;
+
+    async fn update_note(
+        &self,
+        id: ReservationId,
+        note: String,
+    ) -> Result<luckychacha_reservation_abi::Reservation, ReservationError>;
+
+    async fn delete(&self, id: ReservationId) -> Result<(), ReservationError>;
+
+    async fn get(
+        &self,
+        query: luckychacha_reservation_abi::ReservationQuery,
+    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, ReservationError>;
+}
