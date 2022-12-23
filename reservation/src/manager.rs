@@ -20,7 +20,7 @@ impl Rsvp for ReservationManager {
         let timespan: PgRange<DateTime<Utc>> = (start..end).into();
 
         let id = sqlx::query(
-            "INSERT INTO reservation(id, user_id, resource_id, start_time, end_time, note) VALUES (&1, $2, $3, $4) RETURNING id",
+            "INSERT INTO reservation(id, user_id, resource_id, start_time, end_time, note, status) VALUES ($1, $2, $3, $4, $5) RETURNING id",
         )
             .bind(rsvp.user_id.clone())
             .bind(rsvp.resource_id.clone())
