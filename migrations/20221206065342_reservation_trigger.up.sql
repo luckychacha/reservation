@@ -1,6 +1,6 @@
 
 -- reservation change queue
-CREATE TYPE rsvp.reservation_update_type AS ENUM('unknown', 'pending', 'confirmed', 'blocked');
+CREATE TYPE rsvp.reservation_update_type AS ENUM('unknown', 'create', 'update', 'delete');
 
 CREATE TABLE IF NOT EXISTS rsvp.reservation_change (
      id SERIAL NOT NULL ,
