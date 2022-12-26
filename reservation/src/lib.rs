@@ -19,11 +19,12 @@
 // sqlx migrate revert
 
 // psql -d reservation / pgcli -d reservation
-mod error;
+
+// cargo nextest run
 mod manager;
 
 use async_trait::async_trait;
-pub use error::ReservationError;
+pub use luckychacha_reservation_abi::ReservationError;
 use sqlx::PgPool;
 
 pub type ReservationId = String;

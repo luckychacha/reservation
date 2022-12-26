@@ -1,10 +1,13 @@
+mod error;
 mod pb;
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use prost_types::Timestamp;
 use std::fmt;
 use std::fmt::Formatter;
+
 // 这样在别的地方引用 abi 深层代码的时候就可以直接 abi::xxx 了
+pub use error::ReservationError;
 pub use pb::*;
 
 pub fn convert_to_utc_time(ts: Timestamp) -> DateTime<Utc> {
@@ -29,5 +32,29 @@ impl fmt::Display for ReservationStatus {
             ReservationStatus::Confirmed => write!(f, "confirmed"),
             ReservationStatus::Blocked => write!(f, "blocked"),
         }
+    }
+}
+
+impl Reservation {
+    pub fn new_pending(
+        uid: impl Into<String>,
+        rid: impl Into<String>,
+        start: DateTime<FixedOffset>,
+        end: DateTime<FixedOffset>,
+        note: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: "".to_string(),
+            user_id: uid.into(),
+            resource_id: rid.into(),
+            start: Some(convert_to_timestamp(start.with_timezone(&Utc))),
+            end: Some(convert_to_timestamp(end.with_timezone(&Utc))),
+            note: note.into(),
+            status: ReservationStatus::Pending as i32,
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), ReservationError> {
+        todo!()
     }
 }

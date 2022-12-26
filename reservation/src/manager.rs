@@ -68,27 +68,30 @@ impl ReservationManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::FixedOffset;
-    use luckychacha_reservation_abi::convert_to_timestamp;
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reserve_should_work_for_valid_window() {
         let manager = ReservationManager::new(migrated_pool.clone());
-        let start: DateTime<FixedOffset> = "2022-12-25T15:00:00+0800".parse().unwrap();
-        let end: DateTime<FixedOffset> = "2022-12-28T11:00:00+0800".parse().unwrap();
-        let rsvp = luckychacha_reservation_abi::Reservation {
-            id: String::from(""),
-            user_id: String::from("luckychacha"),
-            resource_id: String::from("ocean-view-room-666"),
-            start: Some(convert_to_timestamp(start.with_timezone(&Utc))),
-            end: Some(convert_to_timestamp(end.with_timezone(&Utc))),
-            note: String::from(
+        let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
+            "luckychacha-id",
+            "ocean-view-room-666",
+            "2022-12-25T15:00:00+0800".parse().unwrap(),
+            "2022-12-28T11:00:00+0800".parse().unwrap(),
+            String::from(
                 "I'll arrive at 3pm. Please help to upgrade to execuitive room if possible.",
             ),
-            status: luckychacha_reservation_abi::ReservationStatus::Pending as i32,
-        };
+        );
 
         let rsvp = manager.reserve(rsvp).await.unwrap();
         assert_ne!(rsvp.id, "");
     }
+
+    // #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    // async fn reserve_should_reject_if_id_is_not_empty() {
+    //     let manager = ReservationManager::new(migrated_pool.clone());
+    //     let mut rsvp = luckychacha_reservation_abi::Reservation::default();
+    //     rsvp.id = "should-be-empty".to_string();
+
+    //     todo!()
+    // }
 }
