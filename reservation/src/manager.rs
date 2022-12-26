@@ -1,4 +1,4 @@
-use crate::{ReservationError, ReservationId, ReservationManager, Rsvp};
+use crate::{Error, ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use luckychacha_reservation_abi::{convert_to_utc_time, Reservation, ReservationQuery};
@@ -9,9 +9,9 @@ use sqlx::Row;
 
 #[async_trait]
 impl Rsvp for ReservationManager {
-    async fn reserve(&self, mut rsvp: Reservation) -> Result<Reservation, ReservationError> {
+    async fn reserve(&self, mut rsvp: Reservation) -> Result<Reservation, Error> {
         if rsvp.start.is_none() || rsvp.end.is_none() {
-            return Err(ReservationError::InvalidTime);
+            return Err(Error::InvalidTime);
         }
 
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(rsvp.status)
@@ -38,23 +38,19 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
-    async fn change_status(&self, _id: ReservationId) -> Result<Reservation, ReservationError> {
+    async fn change_status(&self, _id: ReservationId) -> Result<Reservation, Error> {
         todo!()
     }
 
-    async fn update_note(
-        &self,
-        _id: ReservationId,
-        _note: String,
-    ) -> Result<Reservation, ReservationError> {
+    async fn update_note(&self, _id: ReservationId, _note: String) -> Result<Reservation, Error> {
         todo!()
     }
 
-    async fn delete(&self, _id: ReservationId) -> Result<(), ReservationError> {
+    async fn delete(&self, _id: ReservationId) -> Result<(), Error> {
         todo!()
     }
 
-    async fn get(&self, _query: ReservationQuery) -> Result<Vec<Reservation>, ReservationError> {
+    async fn get(&self, _query: ReservationQuery) -> Result<Vec<Reservation>, Error> {
         todo!()
     }
 }

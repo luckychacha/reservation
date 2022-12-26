@@ -7,7 +7,7 @@ use std::fmt;
 use std::fmt::Formatter;
 
 // 这样在别的地方引用 abi 深层代码的时候就可以直接 abi::xxx 了
-pub use error::ReservationError;
+pub use error::Error;
 pub use pb::*;
 
 pub fn convert_to_utc_time(ts: Timestamp) -> DateTime<Utc> {
@@ -54,7 +54,7 @@ impl Reservation {
         }
     }
 
-    pub fn validate(&self) -> Result<(), ReservationError> {
+    pub fn validate(&self) -> Result<(), Error> {
         todo!()
     }
 }
