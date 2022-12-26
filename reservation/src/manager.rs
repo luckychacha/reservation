@@ -1,7 +1,7 @@
-use crate::{Error, ReservationId, ReservationManager, Rsvp};
+use crate::{ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use luckychacha_reservation_abi::{convert_to_utc_time, Reservation, ReservationQuery};
+use luckychacha_reservation_abi::{Error, Reservation, ReservationQuery};
 use sqlx::postgres::types::PgRange;
 use sqlx::types::Uuid;
 use sqlx::PgPool;
@@ -10,16 +10,12 @@ use sqlx::Row;
 #[async_trait]
 impl Rsvp for ReservationManager {
     async fn reserve(&self, mut rsvp: Reservation) -> Result<Reservation, Error> {
-        if rsvp.start.is_none() || rsvp.end.is_none() {
-            return Err(Error::InvalidTime);
-        }
+        rsvp.validate()?;
 
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(rsvp.status)
             .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
-        let start = convert_to_utc_time(rsvp.start.as_ref().unwrap().clone());
-        let end = convert_to_utc_time(rsvp.end.as_ref().unwrap().clone());
 
-        let timespan: PgRange<DateTime<Utc>> = (start..end).into();
+        let timespan: PgRange<DateTime<Utc>> = rsvp.get_timespan().into();
 
         let id: Uuid = sqlx::query(
             "INSERT INTO rsvp.reservation(user_id, resource_id, timespan, note, status) VALUES ($1, $2, $3, $4, $5::rsvp.reservation_status) RETURNING id",
@@ -68,7 +64,7 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reserve_should_work_for_valid_window() {
         let manager = ReservationManager::new(migrated_pool.clone());
-        let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
+        let rsvp = Reservation::new_pending(
             "luckychacha-id",
             "ocean-view-room-666",
             "2022-12-25T15:00:00+0800".parse().unwrap(),
@@ -82,12 +78,34 @@ mod tests {
         assert_ne!(rsvp.id, "");
     }
 
-    // #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
-    // async fn reserve_should_reject_if_id_is_not_empty() {
-    //     let manager = ReservationManager::new(migrated_pool.clone());
-    //     let mut rsvp = luckychacha_reservation_abi::Reservation::default();
-    //     rsvp.id = "should-be-empty".to_string();
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn reserve_conflict_reservation_should_reject() {
+        let manager = ReservationManager::new(migrated_pool.clone());
 
-    //     todo!()
-    // }
+        let rsvp1 = Reservation::new_pending(
+            "luckychacha-id",
+            "ocean-view-room-666",
+            "2022-12-25T15:00:00+0800".parse().unwrap(),
+            "2022-12-28T11:00:00+0800".parse().unwrap(),
+            String::from(
+                "I'll arrive at 3pm. Please help to upgrade to execuitive room if possible.",
+            ),
+        );
+
+        let rsvp2 = Reservation::new_pending(
+            "luckychacha-id",
+            "ocean-view-room-666",
+            "2022-12-25T15:00:00+0800".parse().unwrap(),
+            "2022-12-28T11:00:00+0800".parse().unwrap(),
+            String::from(
+                "I'll arrive at 3pm. Please help to upgrade to execuitive room if possible.",
+            ),
+        );
+
+        let _rsvp1 = manager.reserve(rsvp1).await.unwrap();
+
+        let err = manager.reserve(rsvp2).await.unwrap_err();
+        if let Error::ConflictReservation(_info) = err {}
+        // assert!(err, Error::Conflict);
+    }
 }

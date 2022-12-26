@@ -24,7 +24,7 @@
 mod manager;
 
 use async_trait::async_trait;
-pub use luckychacha_reservation_abi::Error;
+use luckychacha_reservation_abi::Error;
 use sqlx::PgPool;
 
 pub type ReservationId = String;
