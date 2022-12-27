@@ -8,19 +8,6 @@ pub enum ReservationConflictInfo {
     Unparsed(String),
 }
 
-#[derive(Debug, Clone)]
-pub struct ReservationConflict {
-    pub new: ReservationWindow,
-    pub old: ReservationWindow,
-}
-
-#[derive(Debug, Clone)]
-pub struct ReservationWindow {
-    pub rid: String,
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
-}
-
 impl FromStr for ReservationConflictInfo {
     type Err = Infallible;
 
@@ -31,6 +18,12 @@ impl FromStr for ReservationConflictInfo {
             Ok(ReservationConflictInfo::Unparsed(s.to_string()))
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ReservationConflict {
+    pub new: ReservationWindow,
+    pub old: ReservationWindow,
 }
 
 impl FromStr for ReservationConflict {
@@ -52,16 +45,21 @@ impl TryFrom<ParsedInfo> for ReservationConflict {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ReservationWindow {
+    pub rid: String,
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+}
+
 impl TryFrom<HashMap<String, String>> for ReservationWindow {
     type Error = ();
 
     fn try_from(value: HashMap<String, String>) -> Result<Self, Self::Error> {
         let timespan_str = value.get("timespan").ok_or(())?.replace('"', "");
         let mut split = timespan_str.splitn(2, ',');
-        let start = parse_datetime(split.next().ok_or(())?).unwrap();
-        let end = DateTime::parse_from_rfc3339(split.next().ok_or(())?)
-            .map_err(|_| ())?
-            .with_timezone(&Utc);
+        let start = parse_datetime(split.next().ok_or(())?)?;
+        let end = parse_datetime(split.next().ok_or(())?)?;
         Ok(Self {
             rid: value.get("resource_id").ok_or(())?.to_string(),
             start,
@@ -128,30 +126,30 @@ mod tests {
         assert_eq!(info.new["resource_id"], "ocean-view-room-666");
     }
 
-    // #[test]
-    // fn hash_map_to_reservation_window_should_work() {
-    //     let mut map = HashMap::new();
-    //     map.insert("resource_id".to_string(), "ocean-view-room-666".to_string());
-    //     map.insert(
-    //         "timespan".to_string(),
-    //         "\"2022-12-25 07:00:00+00\",\"2022-12-28 03:00:00+00\"".to_string(),
-    //     );
-    //     let window: ReservationWindow = map.try_into().unwrap();
-    //     assert_eq!(window.rid, "ocean-view-room-666");
-    //     assert_eq!(window.start.to_rfc3339(), "2022-12-25T07:00:00+00");
-    //     assert_eq!(window.end.to_rfc3339(), "2022-12-28T03:00:00+00");
-    // }
+    #[test]
+    fn hash_map_to_reservation_window_should_work() {
+        let mut map = HashMap::new();
+        map.insert("resource_id".to_string(), "ocean-view-room-666".to_string());
+        map.insert(
+            "timespan".to_string(),
+            "\"2022-12-25 07:00:00+00\",\"2022-12-28 03:00:00+00\"".to_string(),
+        );
+        let window: ReservationWindow = map.try_into().unwrap();
+        assert_eq!(window.rid, "ocean-view-room-666");
+        assert_eq!(window.start.to_rfc3339(), "2022-12-25T07:00:00+00:00");
+        assert_eq!(window.end.to_rfc3339(), "2022-12-28T03:00:00+00:00");
+    }
 
-    // #[test]
-    // fn conflict_error_message_should_parse() {
-    //     let info: ReservationConflictInfo = ERR_MSG.parse().unwrap();
-    //     match info {
-    //         ReservationConflictInfo::Parsed(conflict) => {
-    //             assert_eq!(conflict.new.rid, "ocean-view-room-666");
-    //             assert_eq!(conflict.old.rid, "ocean-view-room-666");
-    //             assert_eq!(conflict.old.start.to_rfc3339(), "2022-12-25 07:00:00+00");
-    //         }
-    //         ReservationConflictInfo::Unparsed(_) => panic!("should be parsed"),
-    //     }
-    // }
+    #[test]
+    fn conflict_error_message_should_parse() {
+        let info: ReservationConflictInfo = ERR_MSG.parse().unwrap();
+        match info {
+            ReservationConflictInfo::Parsed(conflict) => {
+                assert_eq!(conflict.new.rid, "ocean-view-room-666");
+                assert_eq!(conflict.old.rid, "ocean-view-room-666");
+                assert_eq!(conflict.old.start.to_rfc3339(), "2022-12-25T07:00:00+00:00");
+            }
+            ReservationConflictInfo::Unparsed(_) => panic!("should be parsed"),
+        }
+    }
 }

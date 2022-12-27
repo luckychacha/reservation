@@ -59,6 +59,8 @@ impl ReservationManager {
 
 #[cfg(test)]
 mod tests {
+    use luckychacha_reservation_abi::ReservationConflictInfo;
+
     use super::*;
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
@@ -105,7 +107,9 @@ mod tests {
         let _rsvp1 = manager.reserve(rsvp1).await.unwrap();
 
         let err = manager.reserve(rsvp2).await.unwrap_err();
-        if let Error::ConflictReservation(_info) = err {}
+        if let Error::ConflictReservation(ReservationConflictInfo::Parsed(info)) = err {
+            assert_eq!(info.old.rid, "ocean-view-room-666");
+        }
         // assert!(err, Error::Conflict);
     }
 }
