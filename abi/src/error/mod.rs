@@ -1,4 +1,8 @@
+mod conflict;
+
 use sqlx::postgres::PgDatabaseError;
+
+pub use conflict::{ReservationConflictInfo, ReservationWindow};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -14,8 +18,8 @@ pub enum Error {
     #[error("Database error")]
     DbError(sqlx::Error),
 
-    #[error("{0}")]
-    ConflictReservation(String),
+    #[error("Reservation Conflict Error.")]
+    ConflictReservation(ReservationConflictInfo),
 
     #[error("Invalid start or end time for the reservation")]
     InvalidTime,
@@ -37,7 +41,7 @@ impl From<sqlx::Error> for Error {
                 let err: &PgDatabaseError = e.downcast_ref();
                 match (err.code(), err.schema(), err.table()) {
                     ("23P01", Some("rsvp"), Some("reservation")) => {
-                        Error::ConflictReservation(err.detail().unwrap().to_string())
+                        Error::ConflictReservation(err.detail().unwrap().parse().unwrap())
                     }
                     _ => Error::DbError(sqlx::Error::Database(e)),
                 }
