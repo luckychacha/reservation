@@ -20,7 +20,8 @@ impl Rsvp for ReservationManager {
         let id: Uuid = sqlx::query(
             "INSERT INTO rsvp.reservation(user_id, resource_id, timespan, note, status) VALUES ($1, $2, $3, $4, $5::rsvp.reservation_status) RETURNING id",
         )
-            .bind(rsvp.user_id.clone()).bind(rsvp.resource_id.clone())
+            .bind(rsvp.user_id.clone())
+            .bind(rsvp.resource_id.clone())
             .bind(timespan)
             .bind(rsvp.note.clone())
             .bind(status.to_string())
