@@ -12,6 +12,7 @@ impl FromStr for ReservationConflictInfo {
     type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // s.parse() -> impl FromStr for ReservationConflict
         if let Ok(conflict) = s.parse() {
             Ok(ReservationConflictInfo::Parsed(conflict))
         } else {
@@ -30,6 +31,8 @@ impl FromStr for ReservationConflict {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // from_str: impl FromStr for ParsedInfo，将字符串转为 ParsedInfo，即两个 HashMap
+        // try_into: impl TryFrom<ParsedInfo> for ReservationConflict，将 ParsedInfo 尝试转换为 ReservationConflict
         ParsedInfo::from_str(s)?.try_into()
     }
 }
@@ -37,6 +40,7 @@ impl FromStr for ReservationConflict {
 impl TryFrom<ParsedInfo> for ReservationConflict {
     type Error = ();
 
+    // value.new.try_into()?: impl TryFrom<HashMap<String, String>> for ReservationWindow， 将 HashMap 转为 ReservationWindow
     fn try_from(value: ParsedInfo) -> Result<Self, Self::Error> {
         Ok(Self {
             new: value.new.try_into()?,
