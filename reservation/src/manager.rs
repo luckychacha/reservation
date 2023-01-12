@@ -34,8 +34,21 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
-    async fn change_status(&self, _id: ReservationId) -> Result<Reservation, Error> {
-        todo!()
+    async fn change_status(&self, id: ReservationId) -> Result<Reservation, Error> {
+        let id = Uuid::parse_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
+        let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
+            "
+        UPDATE rsvp.reservation
+        SET status = 'confirmed'
+        WHERE id = $1::UUID
+        AND status = 'pending'
+        RETURNING *
+        ",
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(rsvp)
     }
 
     async fn update_note(&self, _id: ReservationId, _note: String) -> Result<Reservation, Error> {
@@ -59,7 +72,7 @@ impl ReservationManager {
 
 #[cfg(test)]
 mod tests {
-    use luckychacha_reservation_abi::ReservationConflictInfo;
+    use luckychacha_reservation_abi::{Reservation, ReservationConflictInfo};
 
     use super::*;
 
@@ -111,5 +124,52 @@ mod tests {
             assert_eq!(info.old.rid, "ocean-view-room-666");
         }
         // assert!(err, Error::Conflict);
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn reservation_change_status_should_work() {
+        let manager = ReservationManager::new(migrated_pool.clone());
+        let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
+            "alice",
+            "ixia-test-1",
+            "2023-01-25T15:00:00-0700".parse().unwrap(),
+            "2023-02-25T12:00:00-0700".parse().unwrap(),
+            "I need to book this for xyz project for a month",
+        );
+        let rsvp = manager.reserve(rsvp).await.unwrap();
+        assert!(!rsvp.id.is_empty());
+
+        let rsvp = manager
+            .change_status(rsvp.id.parse().unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            rsvp.status,
+            luckychacha_reservation_abi::ReservationStatus::Confirmed as i32
+        );
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn reservation_change_status_twice_should_do_nothing() {
+        let manager = ReservationManager::new(migrated_pool.clone());
+        let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
+            "alice",
+            "ixia-test-1",
+            "2023-01-25T15:00:00-0700".parse().unwrap(),
+            "2023-02-25T12:00:00-0700".parse().unwrap(),
+            "I need to book this for xyz project for a month",
+        );
+        let rsvp = manager.reserve(rsvp).await.unwrap();
+        assert!(!rsvp.id.is_empty());
+
+        let rsvp = manager.change_status(rsvp.id).await.unwrap();
+
+        let rsvp = manager.change_status(rsvp.id).await.unwrap_err();
+
+        assert_eq!(
+            rsvp,
+            luckychacha_reservation_abi::Error::ReservationNotFound,
+        );
     }
 }

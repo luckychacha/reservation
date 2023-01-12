@@ -6,20 +6,17 @@ pub use conflict::{ReservationConflictInfo, ReservationWindow};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    // #[error("data store disconnected")]
-    // Disconnect(#[from] io::Error),
-    // #[error("the data for key `{0}` is not available")]
-    // Redaction(String),
-    // #[error("invalid header (expected {expected:?}, found {found:?})")]
-    // InvalidHeader {
-    //     expected: String,
-    //     found: String,
-    // },
     #[error("Database error")]
     DbError(sqlx::Error),
 
     #[error("Reservation Conflict Error.")]
     ConflictReservation(ReservationConflictInfo),
+
+    #[error("No reservation found by the given query condition to confirm.")]
+    ReservationNotFound,
+
+    #[error("Invalid reservation id: {0}")]
+    InvalidReservationId(String),
 
     #[error("Invalid start or end time for the reservation")]
     InvalidTime,
@@ -34,6 +31,22 @@ pub enum Error {
     Unknown,
 }
 
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Error::DbError(_), Error::DbError(_)) => true,
+            (Error::ConflictReservation(v1), Error::ConflictReservation(v2)) => v1 == v2,
+            (Error::ReservationNotFound, Error::ReservationNotFound) => true,
+            (Error::InvalidReservationId(v1), Error::InvalidReservationId(v2)) => v1 == v2,
+            (Error::InvalidTime, Error::InvalidTime) => true,
+            (Error::InvalidUserId(v1), Error::InvalidUserId(v2)) => v1 == v2,
+            (Error::InvalidResourceId(v1), Error::InvalidReservationId(v2)) => v1 == v2,
+            (Error::Unknown, Error::Unknown) => true,
+            _ => false,
+        }
+    }
+}
+
 impl From<sqlx::Error> for Error {
     fn from(e: sqlx::Error) -> Self {
         match e {
@@ -46,6 +59,7 @@ impl From<sqlx::Error> for Error {
                     _ => Error::DbError(sqlx::Error::Database(e)),
                 }
             }
+            sqlx::Error::RowNotFound => Error::ReservationNotFound,
             _ => Error::DbError(e),
         }
     }
