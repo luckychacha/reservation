@@ -38,11 +38,11 @@ impl Rsvp for ReservationManager {
         let id = Uuid::parse_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
         let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
             "
-        UPDATE rsvp.reservation
-        SET status = 'confirmed'
-        WHERE id = $1::UUID
-        AND status = 'pending'
-        RETURNING *
+                UPDATE rsvp.reservation
+                    SET status = 'confirmed'
+                WHERE id = $1::UUID
+                    AND status = 'pending'
+                RETURNING *
         ",
         )
         .bind(id)
