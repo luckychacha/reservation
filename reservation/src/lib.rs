@@ -26,6 +26,7 @@ mod manager;
 use async_trait::async_trait;
 use luckychacha_reservation_abi::Error;
 use sqlx::PgPool;
+use tokio::sync::mpsc;
 
 pub type ReservationId = String;
 // pub type UserId = String;
@@ -58,6 +59,13 @@ pub trait Rsvp {
 
     async fn get(
         &self,
+        id: ReservationId,
+    ) -> Result<luckychacha_reservation_abi::Reservation, Error>;
+
+    async fn query(
+        &self,
         query: luckychacha_reservation_abi::ReservationQuery,
-    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, Error>;
+    ) -> mpsc::Receiver<
+        Result<luckychacha_reservation_abi::Reservation, luckychacha_reservation_abi::Error>,
+    >;
 }

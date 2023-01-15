@@ -1,11 +1,14 @@
+use std::str::FromStr;
+
 use crate::{ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use luckychacha_reservation_abi::{Error, Reservation, ReservationQuery};
+use luckychacha_reservation_abi::{Error, Reservation};
 use sqlx::postgres::types::PgRange;
 use sqlx::types::Uuid;
 use sqlx::PgPool;
 use sqlx::Row;
+use tokio::sync::mpsc;
 
 #[async_trait]
 impl Rsvp for ReservationManager {
@@ -43,7 +46,7 @@ impl Rsvp for ReservationManager {
                 WHERE id = $1::UUID
                     AND status = 'pending'
                 RETURNING *
-        ",
+            ",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -51,15 +54,49 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
-    async fn update_note(&self, _id: ReservationId, _note: String) -> Result<Reservation, Error> {
-        todo!()
+    async fn update_note(&self, id: ReservationId, note: String) -> Result<Reservation, Error> {
+        let id = Uuid::from_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
+        let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
+            "
+                UPDATE rsvp.reservation
+                    SET note = $1
+                WHERE id = $2::UUID
+                RETURNING *
+            ",
+        )
+        .bind(note)
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rsvp)
+    }
+
+    async fn get(&self, id: ReservationId) -> Result<Reservation, Error> {
+        let id = Uuid::parse_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
+
+        let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
+            "
+            select * from rsvp.reservation where id = $1:UUID
+        ",
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rsvp)
     }
 
     async fn delete(&self, _id: ReservationId) -> Result<(), Error> {
         todo!()
     }
 
-    async fn get(&self, _query: ReservationQuery) -> Result<Vec<Reservation>, Error> {
+    async fn query(
+        &self,
+        _query: luckychacha_reservation_abi::ReservationQuery,
+    ) -> mpsc::Receiver<
+        Result<luckychacha_reservation_abi::Reservation, luckychacha_reservation_abi::Error>,
+    > {
         todo!()
     }
 }
