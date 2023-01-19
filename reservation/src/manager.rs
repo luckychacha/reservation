@@ -77,8 +77,8 @@ impl Rsvp for ReservationManager {
 
         let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
             "
-            select * from rsvp.reservation where id = $1:UUID
-        ",
+            SELECT * FROM rsvp.reservation WHERE id = $1::UUID
+            ",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -87,8 +87,13 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
-    async fn delete(&self, _id: ReservationId) -> Result<(), Error> {
-        todo!()
+    async fn delete(&self, id: ReservationId) -> Result<(), Error> {
+        let id = Uuid::parse_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
+        sqlx::query("DELETE FROM rsvp.reservation WHERE id= $1::UUID")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 
     async fn query(
@@ -115,34 +120,13 @@ mod tests {
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reserve_should_work_for_valid_window() {
-        let manager = ReservationManager::new(migrated_pool.clone());
-        let rsvp = Reservation::new_pending(
-            "luckychacha-id",
-            "ocean-view-room-666",
-            "2022-12-25T15:00:00+0800".parse().unwrap(),
-            "2022-12-28T11:00:00+0800".parse().unwrap(),
-            String::from(
-                "I'll arrive at 3pm. Please help to upgrade to execuitive room if possible.",
-            ),
-        );
-
-        let rsvp = manager.reserve(rsvp).await.unwrap();
+        let (_manager, rsvp) = make_luckychacha_reservation(migrated_pool.clone()).await;
         assert_ne!(rsvp.id, "");
     }
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reserve_conflict_reservation_should_reject() {
-        let manager = ReservationManager::new(migrated_pool.clone());
-
-        let rsvp1 = Reservation::new_pending(
-            "luckychacha-id",
-            "ocean-view-room-666",
-            "2022-12-25T15:00:00+0800".parse().unwrap(),
-            "2022-12-28T11:00:00+0800".parse().unwrap(),
-            String::from(
-                "I'll arrive at 3pm. Please help to upgrade to execuitive room if possible.",
-            ),
-        );
+        let (manager, _rsvp1) = make_luckychacha_reservation(migrated_pool.clone()).await;
 
         let rsvp2 = Reservation::new_pending(
             "luckychacha-id",
@@ -154,7 +138,7 @@ mod tests {
             ),
         );
 
-        let _rsvp1 = manager.reserve(rsvp1).await.unwrap();
+        // let _rsvp1 = manager.reserve(rsvp1).await.unwrap();
 
         let err = manager.reserve(rsvp2).await.unwrap_err();
         if let Error::ConflictReservation(ReservationConflictInfo::Parsed(info)) = err {
@@ -165,15 +149,7 @@ mod tests {
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reservation_change_status_should_work() {
-        let manager = ReservationManager::new(migrated_pool.clone());
-        let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
-            "alice",
-            "ixia-test-1",
-            "2023-01-25T15:00:00-0700".parse().unwrap(),
-            "2023-02-25T12:00:00-0700".parse().unwrap(),
-            "I need to book this for xyz project for a month",
-        );
-        let rsvp = manager.reserve(rsvp).await.unwrap();
+        let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
         assert!(!rsvp.id.is_empty());
 
         let rsvp = manager
@@ -189,15 +165,17 @@ mod tests {
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reservation_change_status_twice_should_do_nothing() {
-        let manager = ReservationManager::new(migrated_pool.clone());
-        let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
-            "alice",
-            "ixia-test-1",
-            "2023-01-25T15:00:00-0700".parse().unwrap(),
-            "2023-02-25T12:00:00-0700".parse().unwrap(),
-            "I need to book this for xyz project for a month",
-        );
-        let rsvp = manager.reserve(rsvp).await.unwrap();
+        // let manager = ReservationManager::new(migrated_pool.clone());
+        // let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
+        //     "alice",
+        //     "ixia-test-1",
+        //     "2023-01-25T15:00:00-0700".parse().unwrap(),
+        //     "2023-02-25T12:00:00-0700".parse().unwrap(),
+        //     "I need to book this for xyz project for a month",
+        // );
+        // let rsvp = manager.reserve(rsvp).await.unwrap();
+        let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
+
         assert!(!rsvp.id.is_empty());
 
         let rsvp = manager.change_status(rsvp.id).await.unwrap();
@@ -208,5 +186,88 @@ mod tests {
             rsvp,
             luckychacha_reservation_abi::Error::ReservationNotFound,
         );
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn update_note_should_work() {
+        let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
+        assert!(!rsvp.id.is_empty());
+
+        let rsvp = manager
+            .update_note(rsvp.id, "Hello world".into())
+            .await
+            .unwrap();
+
+        // let rsvp = manager.change_status(rsvp.id).await.unwrap_err();
+
+        assert_eq!(rsvp.note, "Hello world",);
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn get_reservation_should_work() {
+        let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
+        assert!(!rsvp.id.is_empty());
+
+        let rsvp1 = manager.get(rsvp.id.clone()).await.unwrap();
+
+        assert_eq!(rsvp, rsvp1);
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn delete_reservation_should_work() {
+        let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
+        assert!(!rsvp.id.is_empty());
+
+        manager.delete(rsvp.id.clone()).await.unwrap();
+
+        let get_return_err = manager.get(rsvp.id.clone()).await.unwrap_err();
+
+        assert_eq!(get_return_err, Error::ReservationNotFound);
+    }
+
+    // luckychacha reservation template
+    async fn make_luckychacha_reservation(pool: PgPool) -> (ReservationManager, Reservation) {
+        make_reservation(
+            pool,
+            "luckychacha",
+            "ocean-view-room-666",
+            "2022-12-25T15:00:00+0800",
+            "2022-12-28T11:00:00+0800",
+            "I need to book this for xyz project for a month",
+        )
+        .await
+    }
+
+    // alice reservation template
+    async fn make_alice_reservation(pool: PgPool) -> (ReservationManager, Reservation) {
+        make_reservation(
+            pool,
+            "alice",
+            "ixia-test-1",
+            "2022-12-25T15:00:00+0800",
+            "2022-12-28T11:00:00+0800",
+            "I need to book this for xyz project for a month",
+        )
+        .await
+    }
+
+    async fn make_reservation(
+        pool: PgPool,
+        uid: &str,
+        rid: &str,
+        start: &str,
+        end: &str,
+        note: &str,
+    ) -> (ReservationManager, Reservation) {
+        let manager = ReservationManager::new(pool.clone());
+        let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
+            uid,
+            rid,
+            start.parse().unwrap(),
+            end.parse().unwrap(),
+            note,
+        );
+        let rsvp = manager.reserve(rsvp).await.unwrap();
+        (manager, rsvp)
     }
 }

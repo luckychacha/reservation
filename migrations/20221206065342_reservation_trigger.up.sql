@@ -18,7 +18,7 @@ BEGIN
             INSERT INTO rsvp.reservation_change (reservation_id, op) VALUES (NEW.id, 'update');
         END IF;
     ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO rsvp.reservation_change (reservation_id, op) VALUES (NEW.id, 'delete');
+        INSERT INTO rsvp.reservation_change (reservation_id, op) VALUES (OLD.id, 'delete');
     END IF;
     NOTIFY reservaption_update;
     RETURN NULL;
