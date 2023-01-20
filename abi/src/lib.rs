@@ -9,6 +9,10 @@ pub use pb::*;
 
 pub use utils::*;
 
+pub trait Validator {
+    fn validate(&self) -> Result<(), Error>;
+}
+
 /// database equivalent of the "resevation_status" enum.
 #[derive(Debug, sqlx::Type)]
 #[sqlx(type_name = "reservation_status", rename_all = "lowercase")]

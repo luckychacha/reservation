@@ -3,12 +3,12 @@ use std::str::FromStr;
 use crate::{ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use luckychacha_reservation_abi::Validator;
 use luckychacha_reservation_abi::{Error, Reservation};
 use sqlx::postgres::types::PgRange;
 use sqlx::types::Uuid;
 use sqlx::PgPool;
 use sqlx::Row;
-use tokio::sync::mpsc;
 
 #[async_trait]
 impl Rsvp for ReservationManager {
@@ -18,7 +18,7 @@ impl Rsvp for ReservationManager {
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(rsvp.status)
             .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
 
-        let timespan: PgRange<DateTime<Utc>> = rsvp.get_timespan().into();
+        let timespan: PgRange<DateTime<Utc>> = rsvp.get_timespan();
 
         let id: Uuid = sqlx::query(
             "INSERT INTO rsvp.reservation(user_id, resource_id, timespan, note, status) VALUES ($1, $2, $3, $4, $5::rsvp.reservation_status) RETURNING id",
@@ -43,7 +43,7 @@ impl Rsvp for ReservationManager {
             "
                 UPDATE rsvp.reservation
                     SET status = 'confirmed'
-                WHERE id = $1::UUID
+                WHERE id = $1
                     AND status = 'pending'
                 RETURNING *
             ",
@@ -98,11 +98,28 @@ impl Rsvp for ReservationManager {
 
     async fn query(
         &self,
-        _query: luckychacha_reservation_abi::ReservationQuery,
-    ) -> mpsc::Receiver<
-        Result<luckychacha_reservation_abi::Reservation, luckychacha_reservation_abi::Error>,
-    > {
-        todo!()
+        query: luckychacha_reservation_abi::ReservationQuery,
+    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>
+    {
+        let user_id = str_to_option(&query.user_id);
+        let resource_id = str_to_option(&query.resource_id);
+        let range: PgRange<DateTime<Utc>> = query.get_timepspan();
+        let status = luckychacha_reservation_abi::ReservationStatus::from_i32(query.status)
+            .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
+        let rsvp_rows = sqlx::query_as(
+            "SELECT * FROM rsvp.query($1, $2, $3, $4::rsvp.reservation_status, $5, $6, $7)",
+        )
+        .bind(user_id)
+        .bind(resource_id)
+        .bind(range)
+        .bind(status.to_string())
+        .bind(query.page)
+        .bind(query.desc)
+        .bind(query.page_size)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rsvp_rows)
     }
 }
 
@@ -112,9 +129,20 @@ impl ReservationManager {
     }
 }
 
+fn str_to_option(s: &str) -> Option<&str> {
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use luckychacha_reservation_abi::{Reservation, ReservationConflictInfo};
+    use luckychacha_reservation_abi::{
+        convert_to_timestamp, Reservation, ReservationConflictInfo, ReservationQuery,
+        ReservationStatus,
+    };
 
     use super::*;
 
@@ -150,6 +178,7 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reservation_change_status_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
+        println!("rsvp: {:?}", rsvp);
         assert!(!rsvp.id.is_empty());
 
         let rsvp = manager
@@ -165,15 +194,6 @@ mod tests {
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reservation_change_status_twice_should_do_nothing() {
-        // let manager = ReservationManager::new(migrated_pool.clone());
-        // let rsvp = luckychacha_reservation_abi::Reservation::new_pending(
-        //     "alice",
-        //     "ixia-test-1",
-        //     "2023-01-25T15:00:00-0700".parse().unwrap(),
-        //     "2023-02-25T12:00:00-0700".parse().unwrap(),
-        //     "I need to book this for xyz project for a month",
-        // );
-        // let rsvp = manager.reserve(rsvp).await.unwrap();
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
 
         assert!(!rsvp.id.is_empty());
@@ -223,6 +243,51 @@ mod tests {
         let get_return_err = manager.get(rsvp.id.clone()).await.unwrap_err();
 
         assert_eq!(get_return_err, Error::ReservationNotFound);
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn query_reservations_should_work() {
+        let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
+        assert!(!rsvp.id.is_empty());
+
+        // let query = ReservationQuery::new(
+        //     "ixia-test-1",
+        //     "alice",
+        //     "2022-12-25T15:00:00+0800".parse().unwrap(),
+        //     "2022-12-28T11:00:00+0800".parse().unwrap(),
+        //     1,
+        //     10,
+        //     false,
+        //     ReservationStatus::Pending,
+        // );
+        // Self {
+        //     resource_id: resource_id.into(),
+        //     user_id: user_id.into(),
+        //     start: Some(convert_to_timestamp(start)),
+        //     end: Some(convert_to_timestamp(end)),
+        //     status: status as i32,
+        //     page,
+        //     page_size,
+        //     desc,
+        // }
+        // Some(convert_to_timestamp(
+        let query = ReservationQuery {
+            resource_id: "ixia-test-1".into(),
+            user_id: "alice".into(),
+            status: ReservationStatus::Pending as i32,
+            start: Some(convert_to_timestamp(
+                "2022-12-25T15:00:00+0800".parse().unwrap(),
+            )),
+            end: Some(convert_to_timestamp(
+                "2022-12-28T11:00:00+0800".parse().unwrap(),
+            )),
+            page: 1,
+            page_size: 10,
+            desc: false,
+        };
+        let rsvps = manager.query(query).await.unwrap();
+        assert_eq!(rsvps.len(), 1);
+        assert_eq!(rsvps[0], rsvp);
     }
 
     // luckychacha reservation template

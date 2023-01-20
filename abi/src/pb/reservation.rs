@@ -1,5 +1,6 @@
 /// Core reservation object. Contains all the information for a reservation
 /// if ListenResponse op is DELETE, only id will be populated
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Reservation {
     /// unique id for the reservation, if put into ReservationRequest, id should be empty
@@ -25,66 +26,77 @@ pub struct Reservation {
     pub note: ::prost::alloc::string::String,
 }
 /// To make a reservation, send a ReservationRequest with Reservation object (id should be empty)
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReserveRequest {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
 /// Created reservation will be returned in ReserveResponse
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReserveResponse {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
 /// To update a reservation, send an UpdateRequest. Only note is updatable.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateRequest {
     #[prost(string, tag = "2")]
     pub note: ::prost::alloc::string::String,
 }
 /// Updated reservation will be returned in UpdateResponse
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateResponse {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
 /// To change a reservation from pending to confirmed, send a ConfirmRequest
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConfirmRequest {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
 }
 /// Confirmed reservation will be returned in ConfirmResponse
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConfirmResponse {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
 /// To cancel a reservation, send a CancelRequest
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CancelRequest {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
 }
 /// Canceled reservation will be returned in CancelResponse
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CancelResponse {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
 /// To get a reservation, send a GetRequest
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetRequest {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
 }
 /// Reservation will be returned in GetResponse
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetResponse {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
 /// query reservations with user id, resource id, start time, end time, and status
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReservationQuery {
     /// resource id for the reservation query. If empty, query all resources
@@ -102,17 +114,25 @@ pub struct ReservationQuery {
     /// end time for the reservation query, if 0, use Infinity for end time
     #[prost(message, optional, tag = "5")]
     pub end: ::core::option::Option<::prost_types::Timestamp>,
-    /// sort direction
-    #[prost(bool, tag = "6")]
+    /// current page for query
+    #[prost(int32, tag = "6")]
+    pub page: i32,
+    /// page size for the query
+    #[prost(int32, tag = "7")]
+    pub page_size: i32,
+    /// sort direction, desc default is False, which means default is asc.
+    #[prost(bool, tag = "8")]
     pub desc: bool,
 }
 /// To query reservations, send a QueryRequest
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryRequest {
     #[prost(message, optional, tag = "1")]
     pub query: ::core::option::Option<ReservationQuery>,
 }
 /// query reservations, order by reservation id
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReservationFilter {
     /// resource id for the reservation query. If empty, query all resources
@@ -134,12 +154,14 @@ pub struct ReservationFilter {
     pub desc: bool,
 }
 /// To query reservations, send a QueryRequest
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FilterRequest {
     #[prost(message, optional, tag = "1")]
     pub filter: ::core::option::Option<ReservationFilter>,
 }
 /// filter pager info
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FilterPager {
     #[prost(int64, optional, tag = "1")]
@@ -149,6 +171,7 @@ pub struct FilterPager {
     #[prost(int64, optional, tag = "3")]
     pub total: ::core::option::Option<i64>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FilterResponse {
     #[prost(message, repeated, tag = "1")]
@@ -157,9 +180,11 @@ pub struct FilterResponse {
     pub pager: ::core::option::Option<FilterPager>,
 }
 /// Client can listen to reservation updates by sending a ListenRequest
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListenRequest {}
 /// Server will send ListenResponse to client in streaming response
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListenResponse {
     /// update type
@@ -193,6 +218,16 @@ impl ReservationStatus {
             ReservationStatus::Blocked => "RESERVATION_STATUS_BLOCKED",
         }
     }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "RESERVATION_STATUS_UNKNOWN" => Some(Self::Unknown),
+            "RESERVATION_STATUS_PENDING" => Some(Self::Pending),
+            "RESERVATION_STATUS_CONFIRMED" => Some(Self::Confirmed),
+            "RESERVATION_STATUS_BLOCKED" => Some(Self::Blocked),
+            _ => None,
+        }
+    }
 }
 /// when reservation is updated, record the update type
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -214,6 +249,16 @@ impl ReservationUpdateType {
             ReservationUpdateType::Create => "RESERVATION_UPDATE_TYPE_CREATE",
             ReservationUpdateType::Update => "RESERVATION_UPDATE_TYPE_UPDATE",
             ReservationUpdateType::Delete => "RESERVATION_UPDATE_TYPE_DELETE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "RESERVATION_UPDATE_TYPE_UNKNOWN" => Some(Self::Unknown),
+            "RESERVATION_UPDATE_TYPE_CREATE" => Some(Self::Create),
+            "RESERVATION_UPDATE_TYPE_UPDATE" => Some(Self::Update),
+            "RESERVATION_UPDATE_TYPE_DELETE" => Some(Self::Delete),
+            _ => None,
         }
     }
 }
