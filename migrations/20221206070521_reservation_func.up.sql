@@ -10,6 +10,14 @@ CREATE OR REPLACE FUNCTION rsvp.query(
 DECLARE
     _sql text;
 BEGIN
+    -- if page_size is not between 10 and 100, set it to 10
+    IF page_size < 10 OR page_size > 100 THEN
+        page_size := 10;
+    END IF;
+    -- if page is less than 1, set it to 1
+    IF page < 1 THEN
+        page := 1;
+    END IF;
     -- format the query based on parameters
     -- quote_literal 可以防注入，让输入的字符串按照字符串做处理（转义）
     _sql := format(

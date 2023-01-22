@@ -251,17 +251,17 @@ mod tests {
         assert!(!rsvp.id.is_empty());
 
         let query = ReservationQueryBuilder::default()
-            .user_id("alice".into())
+            .user_id("alice")
             .start("2022-12-25T15:00:00+0800".parse::<Timestamp>().unwrap())
             .end("2022-12-28T11:00:00+0800".parse::<Timestamp>().unwrap())
             .status(luckychacha_reservation_abi::ReservationStatus::Pending as i32)
-            .page(1)
-            .page_size(11)
-            .desc(false)
-            .resource_id("ixia-test-1".into())
+            // .page(1)
+            // .page_size(10)
+            // .desc(false)
+            .resource_id("ixia-test-1")
             .build()
             .unwrap();
-
+        println!("{:?}", query);
         let rsvps = manager.query(query).await.unwrap();
         assert_eq!(rsvps.len(), 1);
         assert_eq!(rsvps[0], rsvp);
