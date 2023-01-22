@@ -256,7 +256,7 @@ mod tests {
             .end("2022-12-28T11:00:00+0800".parse::<Timestamp>().unwrap())
             .status(luckychacha_reservation_abi::ReservationStatus::Pending as i32)
             .page(1)
-            .page_size(10)
+            .page_size(11)
             .desc(false)
             .resource_id("ixia-test-1".into())
             .build()
