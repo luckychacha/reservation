@@ -140,9 +140,9 @@ fn str_to_option(s: &str) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use luckychacha_reservation_abi::{
-        convert_to_timestamp, Reservation, ReservationConflictInfo, ReservationQuery,
-        ReservationStatus,
+        Reservation, ReservationConflictInfo, ReservationQueryBuilder,
     };
+    use prost_types::Timestamp;
 
     use super::*;
 
@@ -250,41 +250,18 @@ mod tests {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
         assert!(!rsvp.id.is_empty());
 
-        // let query = ReservationQuery::new(
-        //     "ixia-test-1",
-        //     "alice",
-        //     "2022-12-25T15:00:00+0800".parse().unwrap(),
-        //     "2022-12-28T11:00:00+0800".parse().unwrap(),
-        //     1,
-        //     10,
-        //     false,
-        //     ReservationStatus::Pending,
-        // );
-        // Self {
-        //     resource_id: resource_id.into(),
-        //     user_id: user_id.into(),
-        //     start: Some(convert_to_timestamp(start)),
-        //     end: Some(convert_to_timestamp(end)),
-        //     status: status as i32,
-        //     page,
-        //     page_size,
-        //     desc,
-        // }
-        // Some(convert_to_timestamp(
-        let query = ReservationQuery {
-            resource_id: "ixia-test-1".into(),
-            user_id: "alice".into(),
-            status: ReservationStatus::Pending as i32,
-            start: Some(convert_to_timestamp(
-                "2022-12-25T15:00:00+0800".parse().unwrap(),
-            )),
-            end: Some(convert_to_timestamp(
-                "2022-12-28T11:00:00+0800".parse().unwrap(),
-            )),
-            page: 1,
-            page_size: 10,
-            desc: false,
-        };
+        let query = ReservationQueryBuilder::default()
+            .user_id("alice".into())
+            .start("2022-12-25T15:00:00+0800".parse::<Timestamp>().unwrap())
+            .end("2022-12-28T11:00:00+0800".parse::<Timestamp>().unwrap())
+            .status(luckychacha_reservation_abi::ReservationStatus::Pending as i32)
+            .page(1)
+            .page_size(10)
+            .desc(false)
+            .resource_id("ixia-test-1".into())
+            .build()
+            .unwrap();
+
         let rsvps = manager.query(query).await.unwrap();
         assert_eq!(rsvps.len(), 1);
         assert_eq!(rsvps[0], rsvp);
