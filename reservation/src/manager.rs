@@ -261,7 +261,6 @@ mod tests {
             .resource_id("ixia-test-1")
             .build()
             .unwrap();
-        println!("{:?}", query);
         let rsvps = manager.query(query).await.unwrap();
         assert_eq!(rsvps.len(), 1);
         assert_eq!(rsvps[0], rsvp);
