@@ -4,7 +4,7 @@ CREATE TYPE rsvp.reservation_update_type AS ENUM('unknown', 'create', 'update', 
 
 CREATE TABLE IF NOT EXISTS rsvp.reservation_change (
      id SERIAL NOT NULL ,
-     reservation_id uuid NOT NULL ,
+     reservation_id BIGSERIAL NOT NULL ,
      op rsvp.reservation_update_type NOT NULL
 );
 

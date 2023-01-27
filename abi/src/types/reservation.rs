@@ -2,7 +2,6 @@ use crate::{convert_to_timestamp, Error, Reservation, ReservationStatus, RsvpSta
 use chrono::{DateTime, FixedOffset, Utc};
 use sqlx::{
     postgres::{types::PgRange, PgRow},
-    types::Uuid,
     FromRow, Row,
 };
 use std::ops::Bound;
@@ -18,7 +17,7 @@ impl Reservation {
         note: impl Into<String>,
     ) -> Self {
         Self {
-            id: "".to_string(),
+            id: 0,
             user_id: uid.into(),
             resource_id: rid.into(),
             start: Some(convert_to_timestamp(start.with_timezone(&Utc))),
@@ -49,7 +48,7 @@ impl Validator for Reservation {
 
 impl FromRow<'_, PgRow> for Reservation {
     fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
-        let id: Uuid = row.get("id");
+        let id: i64 = row.get("id");
         let range: PgRange<DateTime<Utc>> = row.get("timespan");
         let range: NaiveRange<DateTime<Utc>> = range.into();
 
@@ -62,7 +61,7 @@ impl FromRow<'_, PgRow> for Reservation {
         let status: RsvpStatus = row.get("status");
 
         Ok(Self {
-            id: id.to_string(),
+            id,
             user_id: row.get("user_id"),
             status: ReservationStatus::from(status).into(),
             resource_id: row.get("resource_id"),

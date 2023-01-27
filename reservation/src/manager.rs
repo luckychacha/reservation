@@ -1,12 +1,9 @@
-use std::str::FromStr;
-
 use crate::{ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use luckychacha_reservation_abi::Validator;
 use luckychacha_reservation_abi::{Error, Reservation};
 use sqlx::postgres::types::PgRange;
-use sqlx::types::Uuid;
 use sqlx::PgPool;
 use sqlx::Row;
 
@@ -20,7 +17,7 @@ impl Rsvp for ReservationManager {
 
         let timespan: PgRange<DateTime<Utc>> = rsvp.get_timespan();
 
-        let id: Uuid = sqlx::query(
+        let id = sqlx::query(
             "INSERT INTO rsvp.reservation(user_id, resource_id, timespan, note, status) VALUES ($1, $2, $3, $4, $5::rsvp.reservation_status) RETURNING id",
         )
             .bind(rsvp.user_id.clone())
@@ -32,13 +29,13 @@ impl Rsvp for ReservationManager {
             .await?
             .get(0);
 
-        rsvp.id = id.to_string();
+        rsvp.id = id;
 
         Ok(rsvp)
     }
 
     async fn change_status(&self, id: ReservationId) -> Result<Reservation, Error> {
-        let id = Uuid::parse_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
+        id.validate()?;
         let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
             "
                 UPDATE rsvp.reservation
@@ -55,12 +52,12 @@ impl Rsvp for ReservationManager {
     }
 
     async fn update_note(&self, id: ReservationId, note: String) -> Result<Reservation, Error> {
-        let id = Uuid::from_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
+        id.validate()?;
         let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
             "
                 UPDATE rsvp.reservation
                     SET note = $1
-                WHERE id = $2::UUID
+                WHERE id = $2
                 RETURNING *
             ",
         )
@@ -73,11 +70,10 @@ impl Rsvp for ReservationManager {
     }
 
     async fn get(&self, id: ReservationId) -> Result<Reservation, Error> {
-        let id = Uuid::parse_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
-
+        id.validate()?;
         let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
             "
-            SELECT * FROM rsvp.reservation WHERE id = $1::UUID
+            SELECT * FROM rsvp.reservation WHERE id = $1
             ",
         )
         .bind(id)
@@ -88,8 +84,8 @@ impl Rsvp for ReservationManager {
     }
 
     async fn delete(&self, id: ReservationId) -> Result<(), Error> {
-        let id = Uuid::parse_str(&id).map_err(|_| Error::InvalidReservationId(id.clone()))?;
-        sqlx::query("DELETE FROM rsvp.reservation WHERE id= $1::UUID")
+        id.validate()?;
+        sqlx::query("DELETE FROM rsvp.reservation WHERE id= $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -149,7 +145,7 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reserve_should_work_for_valid_window() {
         let (_manager, rsvp) = make_luckychacha_reservation(migrated_pool.clone()).await;
-        assert_ne!(rsvp.id, "");
+        assert_ne!(rsvp.id, 0);
     }
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
@@ -179,12 +175,9 @@ mod tests {
     async fn reservation_change_status_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
         println!("rsvp: {:?}", rsvp);
-        assert!(!rsvp.id.is_empty());
+        assert!(rsvp.id > 0);
 
-        let rsvp = manager
-            .change_status(rsvp.id.parse().unwrap())
-            .await
-            .unwrap();
+        let rsvp = manager.change_status(rsvp.id).await.unwrap();
 
         assert_eq!(
             rsvp.status,
@@ -196,7 +189,7 @@ mod tests {
     async fn reservation_change_status_twice_should_do_nothing() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
 
-        assert!(!rsvp.id.is_empty());
+        assert!(rsvp.id > 0);
 
         let rsvp = manager.change_status(rsvp.id).await.unwrap();
 
@@ -211,7 +204,7 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn update_note_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
-        assert!(!rsvp.id.is_empty());
+        assert!(rsvp.id > 0);
 
         let rsvp = manager
             .update_note(rsvp.id, "Hello world".into())
@@ -226,9 +219,9 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn get_reservation_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
-        assert!(!rsvp.id.is_empty());
+        assert!(rsvp.id > 0);
 
-        let rsvp1 = manager.get(rsvp.id.clone()).await.unwrap();
+        let rsvp1 = manager.get(rsvp.id).await.unwrap();
 
         assert_eq!(rsvp, rsvp1);
     }
@@ -236,11 +229,11 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn delete_reservation_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
-        assert!(!rsvp.id.is_empty());
+        assert!(rsvp.id > 0);
 
-        manager.delete(rsvp.id.clone()).await.unwrap();
+        manager.delete(rsvp.id).await.unwrap();
 
-        let get_return_err = manager.get(rsvp.id.clone()).await.unwrap_err();
+        let get_return_err = manager.get(rsvp.id).await.unwrap_err();
 
         assert_eq!(get_return_err, Error::ReservationNotFound);
     }
@@ -248,7 +241,7 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn query_reservations_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
-        assert!(!rsvp.id.is_empty());
+        assert!(rsvp.id > 0);
 
         let query = ReservationQueryBuilder::default()
             .user_id("alice")

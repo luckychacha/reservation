@@ -16,7 +16,7 @@ pub enum Error {
     ReservationNotFound,
 
     #[error("Invalid reservation id: {0}")]
-    InvalidReservationId(String),
+    InvalidReservationId(i64),
 
     #[error("Invalid start or end time for the reservation")]
     InvalidTime,
@@ -40,7 +40,7 @@ impl PartialEq for Error {
             (Error::InvalidReservationId(v1), Error::InvalidReservationId(v2)) => v1 == v2,
             (Error::InvalidTime, Error::InvalidTime) => true,
             (Error::InvalidUserId(v1), Error::InvalidUserId(v2)) => v1 == v2,
-            (Error::InvalidResourceId(v1), Error::InvalidReservationId(v2)) => v1 == v2,
+            (Error::InvalidResourceId(v1), Error::InvalidResourceId(v2)) => v1 == v2,
             (Error::Unknown, Error::Unknown) => true,
             _ => false,
         }
