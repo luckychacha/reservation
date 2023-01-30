@@ -69,6 +69,15 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
+    async fn delete(&self, id: ReservationId) -> Result<(), Error> {
+        id.validate()?;
+        sqlx::query("DELETE FROM rsvp.reservation WHERE id= $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     async fn get(&self, id: ReservationId) -> Result<Reservation, Error> {
         id.validate()?;
         let rsvp: luckychacha_reservation_abi::Reservation = sqlx::query_as(
@@ -81,15 +90,6 @@ impl Rsvp for ReservationManager {
         .await?;
 
         Ok(rsvp)
-    }
-
-    async fn delete(&self, id: ReservationId) -> Result<(), Error> {
-        id.validate()?;
-        sqlx::query("DELETE FROM rsvp.reservation WHERE id= $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
     }
 
     async fn query(
@@ -116,6 +116,14 @@ impl Rsvp for ReservationManager {
         .await?;
 
         Ok(rsvp_rows)
+    }
+
+    async fn query_order_by_id(
+        &self,
+        _query: luckychacha_reservation_abi::FilterRequest,
+    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>
+    {
+        todo!()
     }
 }
 

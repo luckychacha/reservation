@@ -38,4 +38,9 @@ pub trait Rsvp {
         &self,
         query: luckychacha_reservation_abi::ReservationQuery,
     ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>;
+
+    async fn query_order_by_id(
+        &self,
+        query: luckychacha_reservation_abi::FilterRequest,
+    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>;
 }

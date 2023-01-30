@@ -438,6 +438,26 @@ pub mod reservation_service_client {
                 .server_streaming(request.into_request(), path, codec)
                 .await
         }
+        ///  query reservations order by reservation id.
+        pub async fn query_order_by_id(
+            &mut self,
+            request: impl tonic::IntoRequest<super::FilterRequest>,
+        ) -> Result<tonic::Response<tonic::codec::Streaming<super::Reservation>>, tonic::Status>
+        {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/reservation.ReservationService/query_order_by_id",
+            );
+            self.inner
+                .server_streaming(request.into_request(), path, codec)
+                .await
+        }
         /// filter reservations, order by reservation id
         pub async fn filter(
             &mut self,
@@ -516,6 +536,15 @@ pub mod reservation_service_server {
             &self,
             request: tonic::Request<super::QueryRequest>,
         ) -> Result<tonic::Response<Self::queryStream>, tonic::Status>;
+        /// Server streaming response type for the query_order_by_id method.
+        type query_order_by_idStream: futures_core::Stream<Item = Result<super::Reservation, tonic::Status>>
+            + Send
+            + 'static;
+        ///  query reservations order by reservation id.
+        async fn query_order_by_id(
+            &self,
+            request: tonic::Request<super::FilterRequest>,
+        ) -> Result<tonic::Response<Self::query_order_by_idStream>, tonic::Status>;
         /// filter reservations, order by reservation id
         async fn filter(
             &self,
@@ -765,6 +794,42 @@ pub mod reservation_service_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = querySvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
+                            accept_compression_encodings,
+                            send_compression_encodings,
+                        );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/reservation.ReservationService/query_order_by_id" => {
+                    #[allow(non_camel_case_types)]
+                    struct query_order_by_idSvc<T: ReservationService>(pub Arc<T>);
+                    impl<T: ReservationService>
+                        tonic::server::ServerStreamingService<super::FilterRequest>
+                        for query_order_by_idSvc<T>
+                    {
+                        type Response = super::Reservation;
+                        type ResponseStream = T::query_order_by_idStream;
+                        type Future =
+                            BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::FilterRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { (*inner).query_order_by_id(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = query_order_by_idSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
                             accept_compression_encodings,

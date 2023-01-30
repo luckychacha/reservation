@@ -1,7 +1,7 @@
 CREATE TYPE rsvp.reservation_status AS ENUM('unknown', 'pending', 'confirmed', 'blocked');
 
 CREATE TABLE rsvp.reservation (
-    id bigserial NOT NULL,
+    id BIGSERIAL NOT NULL,
     user_id VARCHAR(64) NOT NULL,
     status rsvp.reservation_status NOT NULL DEFAULT 'pending',
 
