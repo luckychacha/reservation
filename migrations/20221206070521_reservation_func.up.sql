@@ -61,8 +61,8 @@ BEGIN
     IF page_size < 10 OR page_size > 100 THEN
         page_size := 10;
     END IF;
-    -- if cursor is NULL, set it to 0 if is_desc is false, or to 2^63 -1 if is_desc is true
-    IF cursor IS NULL THEN
+    -- if cursor is NULL or less than 0, set it to 0 if is_desc is false, or to 2^63 -1 if is_desc is true
+    IF cursor IS NULL OR cursor < 0 THEN
         IF is_desc THEN
             cursor := 9223372036854775807;
         ELSE

@@ -1,7 +1,7 @@
 mod manager;
 
 use async_trait::async_trait;
-use luckychacha_reservation_abi::{Error, ReservationId};
+use luckychacha_reservation_abi::{Error, FilterPager, ReservationId};
 use sqlx::PgPool;
 
 #[derive(Debug)]
@@ -42,5 +42,8 @@ pub trait Rsvp {
     async fn filter(
         &self,
         filter: luckychacha_reservation_abi::ReservationFilter,
-    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>;
+    ) -> Result<
+        (FilterPager, Vec<luckychacha_reservation_abi::Reservation>),
+        luckychacha_reservation_abi::Error,
+    >;
 }

@@ -1,8 +1,8 @@
 use crate::{ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use luckychacha_reservation_abi::Validator;
 use luckychacha_reservation_abi::{Error, Reservation};
+use luckychacha_reservation_abi::{FilterPager, Validator};
 use sqlx::postgres::types::PgRange;
 use sqlx::PgPool;
 use sqlx::Row;
@@ -121,13 +121,15 @@ impl Rsvp for ReservationManager {
     async fn filter(
         &self,
         filter: luckychacha_reservation_abi::ReservationFilter,
-    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>
-    {
+    ) -> Result<
+        (FilterPager, Vec<luckychacha_reservation_abi::Reservation>),
+        luckychacha_reservation_abi::Error,
+    > {
         let user_id = str_to_option(&filter.user_id);
         let resource_id = str_to_option(&filter.resource_id);
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(filter.status)
             .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
-        let rsvp_rows = sqlx::query_as(
+        let rsvp_rows: Vec<Reservation> = sqlx::query_as(
             "SELECT * FROM rsvp.filter($1, $2, $3::rsvp.reservation_status, $4, $5, $6)",
         )
         .bind(user_id)
@@ -139,7 +141,12 @@ impl Rsvp for ReservationManager {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rsvp_rows)
+        let pager = FilterPager {
+            next: Some(rsvp_rows[rsvp_rows.len() - 1].id),
+            prev: Some(rsvp_rows[0].id),
+            total: Some(0),
+        };
+        Ok((pager, rsvp_rows))
     }
 }
 
@@ -325,8 +332,8 @@ mod tests {
             .build()
             .unwrap();
         let rsvps = manager.filter(filter).await.unwrap();
-        assert_eq!(rsvps.len(), 1);
-        assert_eq!(rsvps[0], rsvp);
+        assert_eq!(rsvps.1.len(), 1);
+        assert_eq!(rsvps.1[0], rsvp);
     }
 
     // luckychacha reservation template

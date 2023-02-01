@@ -173,8 +173,6 @@ service ReservationService {
   rpc get(GetRequest) returns (GetResponse);
   // query reservations by resource id, user id, status, start time, end time
   rpc query(QueryRequest) returns (stream Reservation);
-  //  query reservations order by reservation id.
-  rpc query_order_by_id(FilterRequest) returns (stream Reservation);
   // filter reservations, order by reservation id
   rpc filter(FilterRequest) returns (FilterResponse);
   // another system could monitor newly added/confirmed/cancelled reservations
