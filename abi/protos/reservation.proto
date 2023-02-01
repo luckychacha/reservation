@@ -125,7 +125,7 @@ message ReservationFilter {
   ReservationStatus status = 3;
   optional int64 cursor = 4;
   // page size for the query
-  int64 page_size = 5;
+  int32 page_size = 5;
   // sort direction
   bool desc = 6;
 }

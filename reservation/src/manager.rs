@@ -118,12 +118,28 @@ impl Rsvp for ReservationManager {
         Ok(rsvp_rows)
     }
 
-    async fn query_order_by_id(
+    async fn filter(
         &self,
-        _query: luckychacha_reservation_abi::FilterRequest,
+        filter: luckychacha_reservation_abi::ReservationFilter,
     ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>
     {
-        todo!()
+        let user_id = str_to_option(&filter.user_id);
+        let resource_id = str_to_option(&filter.resource_id);
+        let status = luckychacha_reservation_abi::ReservationStatus::from_i32(filter.status)
+            .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
+        let rsvp_rows = sqlx::query_as(
+            "SELECT * FROM rsvp.filter($1, $2, $3::rsvp.reservation_status, $4, $5, $6)",
+        )
+        .bind(user_id)
+        .bind(resource_id)
+        .bind(status.to_string())
+        .bind(filter.cursor)
+        .bind(filter.desc)
+        .bind(filter.page_size)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rsvp_rows)
     }
 }
 
@@ -144,7 +160,7 @@ fn str_to_option(s: &str) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use luckychacha_reservation_abi::{
-        Reservation, ReservationConflictInfo, ReservationQueryBuilder,
+        Reservation, ReservationConflictInfo, ReservationFilterBuilder, ReservationQueryBuilder,
     };
     use prost_types::Timestamp;
 
@@ -294,6 +310,21 @@ mod tests {
             .build()
             .unwrap();
         let rsvps = manager.query(query).await.unwrap();
+        assert_eq!(rsvps.len(), 1);
+        assert_eq!(rsvps[0], rsvp);
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn filter_reservations_should_work() {
+        let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
+        assert!(rsvp.id > 0);
+
+        let filter = ReservationFilterBuilder::default()
+            .user_id("alice")
+            .status(luckychacha_reservation_abi::ReservationStatus::Pending as i32)
+            .build()
+            .unwrap();
+        let rsvps = manager.filter(filter).await.unwrap();
         assert_eq!(rsvps.len(), 1);
         assert_eq!(rsvps[0], rsvp);
     }

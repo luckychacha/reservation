@@ -49,7 +49,7 @@ CREATE OR REPLACE FUNCTION rsvp.filter(
     uid text,
     rid text,
     status rsvp.reservation_status,
-    cursor integer DEFAULT NULL,
+    cursor bigint DEFAULT NULL,
     is_desc bool DEFAULT FALSE,
     page_size integer DEFAULT 10
 ) RETURNS TABLE (LIKE rsvp.reservation) AS $$
@@ -57,6 +57,10 @@ DECLARE
     _sql text;
     _offset bigint;
 BEGIN
+    -- if page_size is not between 10 and 100, set it to 10
+    IF page_size < 10 OR page_size > 100 THEN
+        page_size := 10;
+    END IF;
     -- if cursor is NULL, set it to 0 if is_desc is false, or to 2^63 -1 if is_desc is true
     IF cursor IS NULL THEN
         IF is_desc THEN
