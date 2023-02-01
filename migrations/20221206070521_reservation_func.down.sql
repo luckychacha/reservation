@@ -1,1 +1,2 @@
 DROP FUNCTION IF EXISTS rsvp.query;
+DROP FUNCTION IF EXISTS rsvp.filter;
