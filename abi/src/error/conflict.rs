@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn parsed_datetime_should_work() {
         let dt = parse_str_into_datetime_utc("2022-12-26 22:00:00+00").unwrap();
-        println!("dt: {}", dt);
+        println!("dt: {dt}");
         assert_eq!(dt.to_rfc3339(), "2022-12-26T22:00:00+00:00");
     }
 

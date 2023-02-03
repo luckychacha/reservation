@@ -45,6 +45,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- we filter 2 more items one for starting, one for ending
+-- If starting existing, then we have previous page,
+-- If ending existing, then we have next page.
 CREATE OR REPLACE FUNCTION rsvp.filter(
     uid text,
     rid text,
@@ -72,8 +75,8 @@ BEGIN
     _sql := format(
         'SELECT * FROM rsvp.reservation WHERE %s AND status = %L AND %s ORDER BY id %s LIMIT %L::integer',
         CASE
-            WHEN is_desc THEN 'id < ' || cursor
-            ELSE 'id > ' || cursor
+            WHEN is_desc THEN 'id <= ' || cursor
+            ELSE 'id >= ' || cursor
         END,
         status,
         CASE
@@ -86,7 +89,7 @@ BEGIN
             WHEN is_desc THEN 'DESC'
             ELSE 'ASC'
         END,
-        page_size
+        page_size + 1
     );
     -- log the sql 暂时保留、未来可以删除
     RAISE NOTICE '%', _sql;
