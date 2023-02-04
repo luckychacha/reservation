@@ -129,6 +129,12 @@ impl Rsvp for ReservationManager {
         let resource_id = str_to_option(&filter.resource_id);
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(filter.status)
             .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
+
+        let page_size = if filter.page_size <= 10 || filter.page_size > 100 {
+            10
+        } else {
+            filter.page_size
+        };
         let rsvp_rows: Vec<Reservation> = sqlx::query_as(
             "SELECT * FROM rsvp.filter($1, $2, $3::rsvp.reservation_status, $4, $5, $6)",
         )
@@ -137,7 +143,7 @@ impl Rsvp for ReservationManager {
         .bind(status.to_string())
         .bind(filter.cursor)
         .bind(filter.desc)
-        .bind(filter.page_size)
+        .bind(page_size)
         .fetch_all(&self.pool)
         .await?;
 
@@ -205,7 +211,7 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reservation_change_status_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
-        println!("rsvp: {:?}", rsvp);
+        println!("rsvp: {rsvp:?}");
         assert!(rsvp.id > 0);
 
         let rsvp = manager.change_status(rsvp.id).await.unwrap();
