@@ -9,7 +9,7 @@ use luckychacha_reservation_abi::{
 use tonic::{async_trait, Request, Response, Status};
 pub struct RsvpService;
 
-type ReservationStream = Pin<Box<dyn Stream<Item = Result<Reservation, Status>> + Send + 'static>>;
+type ReservationStream = Pin<Box<dyn Stream<Item = Result<Reservation, Status>> + Send>>;
 #[async_trait]
 impl ReservationService for RsvpService {
     async fn reserve(
