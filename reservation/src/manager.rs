@@ -129,6 +129,12 @@ impl Rsvp for ReservationManager {
         let resource_id = str_to_option(&filter.resource_id);
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(filter.status)
             .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
+
+        let page_size = if filter.page_size <= 10 || filter.page_size > 100 {
+            10
+        } else {
+            filter.page_size
+        };
         let rsvp_rows: Vec<Reservation> = sqlx::query_as(
             "SELECT * FROM rsvp.filter($1, $2, $3::rsvp.reservation_status, $4, $5, $6)",
         )
@@ -137,16 +143,38 @@ impl Rsvp for ReservationManager {
         .bind(status.to_string())
         .bind(filter.cursor)
         .bind(filter.desc)
-        .bind(filter.page_size)
+        .bind(page_size)
         .fetch_all(&self.pool)
         .await?;
 
+        let has_prev = !rsvp_rows.is_empty() && Some(rsvp_rows[0].id) == filter.cursor;
+        let start = if has_prev { 1 } else { 0 };
+
+        let has_next = !rsvp_rows.is_empty() && rsvp_rows.len() - start > page_size as usize;
+        let end = if has_next {
+            rsvp_rows.len() - 1
+        } else {
+            rsvp_rows.len()
+        };
+
+        let next = if has_next {
+            Some(rsvp_rows[end].id)
+        } else {
+            None
+        };
+        let prev = if has_prev {
+            Some(rsvp_rows[0].id)
+        } else {
+            None
+        };
+
+        let result = rsvp_rows[start..end].to_vec();
         let pager = FilterPager {
-            next: Some(rsvp_rows[rsvp_rows.len() - 1].id),
-            prev: Some(rsvp_rows[0].id),
+            next,
+            prev,
             total: Some(0),
         };
-        Ok((pager, rsvp_rows))
+        Ok((pager, result))
     }
 }
 
@@ -205,7 +233,7 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reservation_change_status_should_work() {
         let (manager, rsvp) = make_alice_reservation(migrated_pool.clone()).await;
-        println!("rsvp: {:?}", rsvp);
+        println!("rsvp: {rsvp:?}");
         assert!(rsvp.id > 0);
 
         let rsvp = manager.change_status(rsvp.id).await.unwrap();
@@ -331,9 +359,13 @@ mod tests {
             .status(luckychacha_reservation_abi::ReservationStatus::Pending as i32)
             .build()
             .unwrap();
-        let rsvps = manager.filter(filter).await.unwrap();
-        assert_eq!(rsvps.1.len(), 1);
-        assert_eq!(rsvps.1[0], rsvp);
+        let (pager, rsvps) = manager.filter(filter).await.unwrap();
+
+        assert_eq!(pager.prev, None);
+        assert_eq!(pager.next, None);
+
+        assert_eq!(rsvps.len(), 1);
+        assert_eq!(rsvps[0], rsvp);
     }
 
     // luckychacha reservation template
