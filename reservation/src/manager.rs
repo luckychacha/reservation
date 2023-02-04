@@ -130,7 +130,7 @@ impl Rsvp for ReservationManager {
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(filter.status)
             .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
 
-        let page_size = if filter.page_size <= 10 || filter.page_size > 100 {
+        let page_size = if filter.page_size < 10 || filter.page_size > 100 {
             10
         } else {
             filter.page_size

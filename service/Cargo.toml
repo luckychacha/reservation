@@ -6,3 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.68"
+futures = { version = "0.3.26", default-features = false }
+luckychacha-reservation = { version = "0.1.0", path = "../reservation" }
+luckychacha-reservation-abi = { version = "0.1.0", path = "../abi" }
+tokio = { version = "1.25.0", features = ["full"] }
+tonic = { version = "0.8.3", features = ["tokio-rustls", "gzip"] }
