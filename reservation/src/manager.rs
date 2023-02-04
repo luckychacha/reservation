@@ -158,7 +158,7 @@ impl Rsvp for ReservationManager {
         };
 
         let next = if has_next {
-            Some(rsvp_rows[end].id)
+            Some(rsvp_rows[end - 1].id)
         } else {
             None
         };
