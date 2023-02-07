@@ -1,8 +1,9 @@
 use crate::{ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use luckychacha_reservation_abi::{Error, Reservation};
+use luckychacha_reservation_abi::{DbConfig, Error, Reservation};
 use luckychacha_reservation_abi::{FilterPager, Validator};
+use sqlx::pool::PoolOptions;
 use sqlx::postgres::types::PgRange;
 use sqlx::PgPool;
 use sqlx::Row;
@@ -147,33 +148,27 @@ impl Rsvp for ReservationManager {
         .fetch_all(&self.pool)
         .await?;
 
-        let has_prev = !rsvp_rows.is_empty() && filter.cursor == Some(rsvp_rows[0].id);
+        let has_prev = !rsvp_rows.is_empty() && Some(rsvp_rows[0].id) == filter.cursor;
         let start = if has_prev { 1 } else { 0 };
-        // let start_id = rsvp_rows[start].id;
+
         let has_next = !rsvp_rows.is_empty() && rsvp_rows.len() - start > page_size as usize;
         let end = if has_next {
-            // rsvp_rows[rsvp_rows.len() - 1].id
             rsvp_rows.len() - 1
         } else {
             rsvp_rows.len()
         };
-        // let end_id = rsvp_rows[end].id;
 
-        // TODO: optimize this clone.
-        let result = rsvp_rows[start..end].to_vec();
-
+        let next = if has_next {
+            Some(rsvp_rows[end - 1].id)
+        } else {
+            None
+        };
         let prev = if has_prev {
             Some(rsvp_rows[0].id)
         } else {
             None
         };
-
-        let next = if has_next {
-            Some(rsvp_rows[end].id)
-        } else {
-            None
-        };
-
+        let result = rsvp_rows[start..end].to_vec();
         let pager = FilterPager {
             next,
             prev,
@@ -187,6 +182,14 @@ impl Rsvp for ReservationManager {
 impl ReservationManager {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
+    }
+
+    pub async fn from_config(db_config: &DbConfig) -> Result<Self, Error> {
+        let pool = PoolOptions::default()
+            .max_connections(db_config.max_connections)
+            .connect(&db_config.db_url())
+            .await?;
+        Ok(Self::new(pool))
     }
 }
 

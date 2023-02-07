@@ -3,11 +3,18 @@ mod conflict;
 use sqlx::postgres::PgDatabaseError;
 
 pub use conflict::{ReservationConflictInfo, ReservationWindow};
+use tonic::Status;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Database error")]
     DbError(sqlx::Error),
+
+    #[error("read config.toml failed")]
+    ConfigReadError,
+
+    #[error("parse config.toml failed")]
+    ConfigParseError,
 
     #[error("Reservation Conflict Error.")]
     ConflictReservation(ReservationConflictInfo),
@@ -29,6 +36,23 @@ pub enum Error {
 
     #[error("unknown error")]
     Unknown,
+}
+
+impl From<Error> for Status {
+    fn from(e: Error) -> Self {
+        match e {
+            Error::DbError(_) | Error::ConfigReadError | Error::ConfigParseError => {
+                Status::internal(e.to_string())
+            }
+            Error::ConflictReservation(_)
+            | Error::ReservationNotFound
+            | Error::InvalidReservationId(_)
+            | Error::InvalidTime
+            | Error::InvalidUserId(_)
+            | Error::InvalidResourceId(_) => Status::failed_precondition(e.to_string()),
+            Error::Unknown => Status::unknown(e.to_string()),
+        }
+    }
 }
 
 impl PartialEq for Error {
