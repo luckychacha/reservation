@@ -113,7 +113,7 @@ mod tests {
 
     impl TestConfig {
         pub fn new() -> Self {
-            let mut config =
+            let mut config: Config =
                 Config::load(shellexpand::tilde("~/.config/reservation.yml").as_ref()).unwrap();
             // let mut config = Config::load("../service/fixtures/config.yml").unwrap();
 
@@ -121,8 +121,8 @@ mod tests {
             let rand_uuid = Uuid::new_v4();
             let db_name = format!("test_reservation_{rand_uuid}");
             config.db.dbname = db_name.clone();
-            let server_url = config.db.server_url();
             let db_url = config.db.db_url();
+            let server_url = config.db.server_url();
 
             thread::spawn(move || {
                 TEST_RT.block_on(async move {

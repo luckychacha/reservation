@@ -30,8 +30,6 @@ impl DbConfig {
     pub fn server_url(&self) -> String {
         if self.password.is_empty() {
             format!("postgres://{}@{}:{}", self.user, self.host, self.port)
-
-            // format!("postgres://{}@{}:{}", self.user, self.host, self.port)
         } else {
             format!(
                 "postgres://{}:{}@{}:{}",
@@ -42,7 +40,6 @@ impl DbConfig {
 
     pub fn db_url(&self) -> String {
         format!("{}/{}", self.server_url(), self.dbname)
-        // format!("{}/{}", self.server_url(), self.dbname,)
     }
 }
 
