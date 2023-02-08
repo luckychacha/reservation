@@ -893,9 +893,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "futures",
+ "lazy_static",
  "luckychacha-reservation",
  "luckychacha-reservation-abi",
  "shellexpand",
+ "sqlx",
  "tokio",
  "tonic",
 ]

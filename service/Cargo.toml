@@ -13,3 +13,7 @@ luckychacha-reservation-abi = { version = "0.1.0", path = "../abi" }
 shellexpand = "3.0.0"
 tokio = { version = "1.25.0", features = ["full"] }
 tonic = { version = "0.8.3", features = ["tokio-rustls", "gzip"] }
+
+[dev-dependencies]
+lazy_static = "1.4.0"
+sqlx = { version = "0.6.2", features = ["chrono", "uuid", "runtime-tokio-rustls", "postgres"] }
