@@ -905,9 +905,9 @@ dependencies = [
 
 [[package]]
 name = "luckychacha-sqlx-pg-tester"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b351087896a226ca4eeb2ae5e99732f7a2b069b2c45b9b6f889ef92d5ed5e6e6"
+checksum = "cf7010606ebd7866e1b0238539c22f6fa2133e9ac52c8e698ed6a0450a8c0b29"
 dependencies = [
  "sqlx",
  "tokio",

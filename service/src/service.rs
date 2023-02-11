@@ -86,93 +86,25 @@ impl ReservationService for RsvpService {
 
 #[cfg(test)]
 mod tests {
-    use std::{ops::Deref, sync::Arc, thread};
-
-    use lazy_static::lazy_static;
-    use luckychacha_reservation_abi::Reservation;
-    use sqlx::{types::Uuid, Connection, Executor, PgConnection};
-    use tokio::runtime::Runtime;
-
     use super::*;
+    use luckychacha_reservation_abi::Reservation;
 
-    lazy_static! {
-        static ref TEST_RT: Runtime = Runtime::new().unwrap();
-    }
-
-    struct TestConfig {
-        config: Arc<Config>,
-    }
-
-    impl Deref for TestConfig {
-        type Target = Config;
-
-        fn deref(&self) -> &Self::Target {
-            &self.config
-        }
-    }
-
-    impl TestConfig {
-        pub fn new() -> Self {
-            let mut config: Config =
-                Config::load(shellexpand::tilde("~/.config/reservation.yml").as_ref()).unwrap();
-            // let mut config = Config::load("../service/fixtures/config.yml").unwrap();
-
-            // create tmp database
-            let rand_uuid = Uuid::new_v4();
-            let db_name = format!("test_reservation_{rand_uuid}");
-            config.db.dbname = db_name.clone();
-            let db_url = config.db.db_url();
-            let server_url = config.db.server_url();
-
-            thread::spawn(move || {
-                TEST_RT.block_on(async move {
-                    let mut conn = PgConnection::connect(&server_url).await.unwrap();
-                    conn.execute(format!(r#"CREATE DATABASE "{db_name}""#).as_str())
-                        .await
-                        .expect("Failed when create database {db_name}.");
-
-                    let mut conn = PgConnection::connect(&db_url).await.unwrap();
-
-                    sqlx::migrate!("../migrations")
-                        .run(&mut conn)
-                        .await
-                        .expect("Failed when migrate.");
-                })
-            })
-            .join()
-            .expect("Failed to create database.");
-            Self {
-                config: Arc::new(config),
-            }
-        }
-    }
-
-    impl Drop for TestConfig {
-        fn drop(&mut self) {
-            let server_url = self.config.db.server_url();
-            let database_name = self.config.db.dbname.clone();
-            thread::spawn(move || {
-                TEST_RT.block_on(async move {
-                    let mut conn = PgConnection::connect(&server_url).await.unwrap();
-
-                    #[allow(clippy::expect_used)]
-                    sqlx::query(&format!(r#"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname = '{database_name}'"#))
-                        .execute(&mut conn)
-                        .await
-                        .expect("Terminate all other connections");
-                    #[allow(clippy::expect_used)]
-                    sqlx::query(&format!(r#"DROP DATABASE "{database_name}""#))
-                        .execute(&mut conn)
-                        .await
-                        .expect("Deleting the database");
-                })
-            });
-        }
-    }
+    use luckychacha_sqlx_pg_tester::TestDb;
 
     #[tokio::test]
     async fn reserve_should_work() {
-        let config = TestConfig::new();
+        let mut config = Config::load("fixtures/config.yml").unwrap();
+
+        let tdb = TestDb::new(
+            &config.db.user,
+            &config.db.password,
+            &config.db.host,
+            config.db.port,
+            "../migrations",
+        );
+
+        config.db.dbname = tdb.dbname.clone();
+
         let service = RsvpService::from_config(&config).await.unwrap();
 
         let reservation: Reservation = Reservation::new_pending(

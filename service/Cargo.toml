@@ -17,4 +17,4 @@ tonic = { version = "0.8.3", features = ["tokio-rustls", "gzip"] }
 [dev-dependencies]
 lazy_static = "1.4.0"
 sqlx = { version = "0.6.2", features = ["chrono", "uuid", "runtime-tokio-rustls", "postgres"] }
-luckychacha-sqlx-pg-tester = "0.1.0"
+luckychacha-sqlx-pg-tester = "0.1.1"
