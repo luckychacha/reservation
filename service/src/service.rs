@@ -35,23 +35,35 @@ impl ReservationService for RsvpService {
 
     async fn confirm(
         &self,
-        _request: Request<ConfirmRequest>,
+        request: Request<ConfirmRequest>,
     ) -> Result<Response<ConfirmResponse>, Status> {
-        todo!()
+        let request = request.into_inner();
+        let rsvp = self.manager.change_status(request.id).await?;
+        Ok(Response::new(ConfirmResponse {
+            reservation: Some(rsvp),
+        }))
     }
 
     async fn update(
         &self,
-        _request: Request<UpdateRequest>,
+        request: Request<UpdateRequest>,
     ) -> Result<Response<UpdateResponse>, Status> {
-        todo!()
+        let request = request.into_inner();
+        let rsvp = self.manager.update_note(request.id, request.note).await?;
+        Ok(Response::new(UpdateResponse {
+            reservation: Some(rsvp),
+        }))
     }
 
     async fn cancel(
         &self,
-        _request: Request<CancelRequest>,
+        request: Request<CancelRequest>,
     ) -> Result<Response<CancelResponse>, Status> {
-        todo!()
+        let request = request.into_inner();
+        let rsvp = self.manager.delete(request.id).await?;
+        Ok(Response::new(CancelResponse {
+            reservation: Some(rsvp),
+        }))
     }
 
     async fn get(&self, _request: Request<GetRequest>) -> Result<Response<GetResponse>, Status> {

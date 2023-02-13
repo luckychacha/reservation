@@ -27,7 +27,10 @@ pub trait Rsvp {
         note: String,
     ) -> Result<luckychacha_reservation_abi::Reservation, Error>;
 
-    async fn delete(&self, id: ReservationId) -> Result<(), Error>;
+    async fn delete(
+        &self,
+        id: ReservationId,
+    ) -> Result<luckychacha_reservation_abi::Reservation, Error>;
 
     async fn get(
         &self,
