@@ -3,6 +3,7 @@ mod manager;
 use async_trait::async_trait;
 use luckychacha_reservation_abi::{Error, FilterPager, ReservationId};
 use sqlx::PgPool;
+use tokio::sync::mpsc;
 
 #[derive(Debug)]
 pub struct ReservationManager {
@@ -27,7 +28,10 @@ pub trait Rsvp {
         note: String,
     ) -> Result<luckychacha_reservation_abi::Reservation, Error>;
 
-    async fn delete(&self, id: ReservationId) -> Result<(), Error>;
+    async fn delete(
+        &self,
+        id: ReservationId,
+    ) -> Result<luckychacha_reservation_abi::Reservation, Error>;
 
     async fn get(
         &self,
@@ -37,7 +41,9 @@ pub trait Rsvp {
     async fn query(
         &self,
         query: luckychacha_reservation_abi::ReservationQuery,
-    ) -> Result<Vec<luckychacha_reservation_abi::Reservation>, luckychacha_reservation_abi::Error>;
+    ) -> mpsc::Receiver<
+        Result<luckychacha_reservation_abi::Reservation, luckychacha_reservation_abi::Error>,
+    >;
 
     async fn filter(
         &self,

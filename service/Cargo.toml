@@ -7,12 +7,12 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.68"
-futures = { version = "0.3.26", default-features = false }
 luckychacha-reservation = { version = "0.1.0", path = "../reservation" }
 luckychacha-reservation-abi = { version = "0.1.0", path = "../abi" }
 shellexpand = "3.0.0"
 tokio = { version = "1.25.0", features = ["full"] }
 tonic = { version = "0.8.3", features = ["tokio-rustls", "gzip"] }
+futures = { version = "0.3.26", default-features = false }
 
 [dev-dependencies]
 lazy_static = "1.4.0"
