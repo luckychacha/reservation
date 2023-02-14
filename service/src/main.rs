@@ -1,9 +1,8 @@
 use std::path::Path;
 
 use anyhow::Result;
-use luckychacha_reservation_abi::{reservation_service_server::ReservationServiceServer, Config};
-use luckychacha_reservation_service::RsvpService;
-use tonic::transport::Server;
+use luckychacha_reservation_abi::Config;
+use luckychacha_reservation_service::start_server;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,15 +20,8 @@ async fn main() -> Result<()> {
         }
     });
 
-    let config = Config::load(&filename)?;
+    let config = Config::load(filename)?;
     println!("{config:?}");
 
-    let addr = format!("{}:{}", config.server.host, config.server.port).parse()?;
-    let svc = RsvpService::from_config(&config).await?;
-    let svc = ReservationServiceServer::new(svc);
-
-    println!("Listening on: {addr}");
-
-    Server::builder().add_service(svc).serve(addr).await?;
-    Ok(())
+    start_server(&config).await
 }

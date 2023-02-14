@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::{Deserialize, Serialize};
 
 use crate::Error;
@@ -9,7 +11,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load(filename: &str) -> Result<Self, Error> {
+    pub fn load(filename: impl AsRef<Path>) -> Result<Self, Error> {
         let f: String = std::fs::read_to_string(filename).map_err(|_| Error::ConfigReadError)?;
         serde_yaml::from_str(&f).map_err(|_| Error::ConfigReadError)
     }
@@ -61,7 +63,7 @@ mod tests {
     fn config_should_loaded() {
         let filename = String::from("../service/fixtures/config.yml");
         assert_eq!(
-            Config::load(&filename),
+            Config::load(filename),
             Ok(Config {
                 db: DbConfig {
                     host: String::from("localhost"),
