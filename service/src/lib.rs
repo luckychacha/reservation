@@ -21,7 +21,7 @@ pub struct TonicReceiverStream<T> {
     inner: mpsc::Receiver<Result<T, luckychacha_reservation_abi::Error>>,
 }
 
-pub async fn start_server(config: &Config) -> Result<()> {
+pub async fn start_server(config: &Config) -> Result<(), anyhow::Error> {
     let addr = format!("{}:{}", config.server.host, config.server.port).parse()?;
     let svc = RsvpService::from_config(config).await?;
     let svc = ReservationServiceServer::new(svc);
