@@ -1,4 +1,6 @@
-use std::pin::Pin;
+mod service;
+#[cfg(test)]
+mod test_utils;
 
 use anyhow::Result;
 use futures::Stream;
@@ -6,10 +8,9 @@ use luckychacha_reservation::ReservationManager;
 use luckychacha_reservation_abi::{
     reservation_service_server::ReservationServiceServer, Config, Reservation,
 };
+use std::pin::Pin;
 use tokio::sync::mpsc;
 use tonic::{transport::Server, Status};
-
-mod service;
 
 pub struct RsvpService {
     manager: ReservationManager,

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Error;
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct Config {
     pub db: DbConfig,
     pub server: ServerConfig,
@@ -17,7 +17,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct DbConfig {
     pub host: String,
     pub port: u16,
@@ -49,10 +49,19 @@ fn default_pool_size() -> u32 {
     5
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+}
+
+impl ServerConfig {
+    pub fn server_url(&self, https: bool) -> String {
+        if https {
+            return format!("https://{}:{}", self.host, self.port);
+        }
+        format!("http://{}:{}", self.host, self.port)
+    }
 }
 
 #[cfg(test)]
