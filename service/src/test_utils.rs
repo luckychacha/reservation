@@ -1,6 +1,6 @@
 use luckychacha_reservation_abi::Config;
 use luckychacha_sqlx_pg_tester::TestDb;
-use std::ops::Deref;
+use std::{ops::Deref, path::Path};
 
 pub struct TestConfig {
     #[allow(dead_code)]
@@ -9,8 +9,8 @@ pub struct TestConfig {
 }
 
 impl TestConfig {
-    pub fn new() -> Self {
-        let mut config = Config::load("fixtures/config.yml").unwrap();
+    pub fn new(filename: impl AsRef<Path>) -> Self {
+        let mut config = Config::load(filename).unwrap();
 
         let tdb = TestDb::new(
             &config.db.user,
@@ -23,6 +23,13 @@ impl TestConfig {
         config.db.dbname = tdb.dbname.clone();
         Self { tdb, config }
     }
+
+    #[allow(dead_code)]
+    pub fn with_server_port(port: u16) -> Self {
+        let mut config = TestConfig::default();
+        config.config.server.port = port;
+        config
+    }
 }
 
 impl Deref for TestConfig {
@@ -30,5 +37,11 @@ impl Deref for TestConfig {
 
     fn deref(&self) -> &Self::Target {
         &self.config
+    }
+}
+
+impl Default for TestConfig {
+    fn default() -> Self {
+        Self::new("fixtures/config.yml")
     }
 }

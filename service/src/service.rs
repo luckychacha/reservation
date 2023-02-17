@@ -146,7 +146,7 @@ mod tests {
 
     #[tokio::test]
     async fn reserve_should_work() {
-        let config = TestConfig::new();
+        let config = TestConfig::default();
         let service = RsvpService::from_config(&config).await.unwrap();
 
         let reservation: Reservation = Reservation::new_pending(
