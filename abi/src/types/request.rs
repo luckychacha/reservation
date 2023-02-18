@@ -1,4 +1,6 @@
-use crate::{FilterRequest, Reservation, ReservationFilter, ReserveRequest};
+use crate::{
+    FilterRequest, QueryRequest, Reservation, ReservationFilter, ReservationQuery, ReserveRequest,
+};
 
 macro_rules! impl_new {
     ($request_name: ident, $field: ident, $inner: ty) => {
@@ -13,7 +15,7 @@ macro_rules! impl_new {
 }
 impl_new!(ReserveRequest, reservation, Reservation);
 impl_new!(FilterRequest, filter, ReservationFilter);
-
+impl_new!(QueryRequest, query, ReservationQuery);
 // impl ReserveRequest {
 //     pub fn new(reservation: Reservation) -> Self {
 //         Self {

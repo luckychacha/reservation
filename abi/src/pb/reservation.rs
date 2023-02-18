@@ -116,22 +116,14 @@ pub struct ReservationQuery {
     pub status: i32,
     /// start time for the reservation query, if 0, use Infinity for start time
     #[prost(message, optional, tag = "4")]
-    #[builder(setter(into, strip_option))]
+    #[builder(setter(into, strip_option), default)]
     pub start: ::core::option::Option<::prost_types::Timestamp>,
     /// end time for the reservation query, if 0, use Infinity for end time
     #[prost(message, optional, tag = "5")]
-    #[builder(setter(into, strip_option))]
+    #[builder(setter(into, strip_option), default)]
     pub end: ::core::option::Option<::prost_types::Timestamp>,
-    /// current page for query
-    #[prost(int32, tag = "6")]
-    #[builder(setter(into), default)]
-    pub page: i32,
-    /// page size for the query
-    #[prost(int32, tag = "7")]
-    #[builder(setter(into), default)]
-    pub page_size: i32,
     /// sort direction, desc default is False, which means default is asc.
-    #[prost(bool, tag = "8")]
+    #[prost(bool, tag = "6")]
     #[builder(setter(into), default)]
     pub desc: bool,
 }
@@ -163,9 +155,9 @@ pub struct ReservationFilter {
     #[builder(setter(into), default)]
     pub cursor: ::core::option::Option<i64>,
     /// page size for the query
-    #[prost(int32, tag = "5")]
-    #[builder(setter(into), default)]
-    pub page_size: i32,
+    #[prost(int64, tag = "5")]
+    #[builder(setter(into), default = "10")]
+    pub page_size: i64,
     /// sort direction
     #[prost(bool, tag = "6")]
     #[builder(setter(into), default)]

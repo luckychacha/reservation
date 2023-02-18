@@ -2,7 +2,9 @@ use crate::{ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::StreamExt;
-use luckychacha_reservation_abi::{DbConfig, FilterPager, Reservation, Validator};
+use luckychacha_reservation_abi::{
+    convert_to_utc_time, DbConfig, FilterPager, Reservation, Validator,
+};
 use sqlx::{
     postgres::{types::PgRange, PgPoolOptions},
     PgPool, Row,
@@ -120,24 +122,25 @@ impl Rsvp for ReservationManager {
     > {
         let user_id = string_to_option(&query.user_id);
         let resource_id = string_to_option(&query.resource_id);
-        let range: PgRange<DateTime<Utc>> = query.get_timepspan();
         let status = luckychacha_reservation_abi::ReservationStatus::from_i32(query.status)
             .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
+
+        let start = query.start.map(convert_to_utc_time);
+        let end = query.end.map(convert_to_utc_time);
 
         let pool = self.pool.clone();
         let (tx, rx) = mpsc::channel(128);
 
         tokio::spawn(async move {
             let mut rsvp_rows = sqlx::query_as(
-                "SELECT * FROM rsvp.query($1, $2, $3, $4::rsvp.reservation_status, $5, $6, $7)",
+                "SELECT * FROM rsvp.query($1, $2, $3, $4, $5::rsvp.reservation_status, $6)",
             )
             .bind(user_id)
             .bind(resource_id)
-            .bind(range)
+            .bind(start)
+            .bind(end)
             .bind(status.to_string())
-            .bind(query.page)
             .bind(query.desc)
-            .bind(query.page_size)
             .fetch_many(&pool);
             while let Some(ret) = rsvp_rows.next().await {
                 match ret {

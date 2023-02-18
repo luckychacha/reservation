@@ -1,28 +1,26 @@
 CREATE OR REPLACE FUNCTION rsvp.query(
     uid text,
     rid text,
-    during TSTZRANGE,
-    status rsvp.reservation_status,
-    page integer DEFAULT 1,
-    is_desc bool DEFAULT FALSE,
-    page_size integer DEFAULT 10
+    _start timestamp with time zone,
+    _end timestamp with time zone,
+    status rsvp.reservation_status DEFAULT 'pending',
+    is_desc bool DEFAULT FALSE
 ) RETURNS TABLE (LIKE rsvp.reservation) AS $$
 DECLARE
+    _during tstzrange;
     _sql text;
 BEGIN
-    -- if page_size is not between 10 and 100, set it to 10
-    IF page_size < 10 OR page_size > 100 THEN
-        page_size := 10;
-    END IF;
-    -- if page is less than 1, set it to 1
-    IF page < 1 THEN
-        page := 1;
-    END IF;
+    -- if start or end is null, use infinity
+    _during := tzrange(
+        COALESCE(_start, '-infinity'),
+        COALESCE(_end, 'infinity'),
+        '[)]'
+    );
     -- format the query based on parameters
     -- quote_literal 可以防注入，让输入的字符串按照字符串做处理（转义）
     _sql := format(
-        'SELECT * FROM rsvp.reservation WHERE %L @> timespan AND status = %L AND %s ORDER BY lower(timespan) %s LIMIT %L::integer OFFSET %L::integer',
-        during,
+        'SELECT * FROM rsvp.reservation WHERE %L @> timespan AND status = %L AND %s ORDER BY lower(timespan) %s',
+        _during,
         status,
         CASE
             WHEN uid IS NULL AND rid IS NULL THEN 'TRUE'
@@ -33,9 +31,7 @@ BEGIN
         CASE
             WHEN is_desc THEN 'DESC'
             ELSE 'ASC'
-        END,
-        page_size,
-        (page - 1) * page_size
+        END
     );
     -- log the sql 暂时保留、未来可以删除
     RAISE NOTICE '%', _sql;
@@ -54,7 +50,7 @@ CREATE OR REPLACE FUNCTION rsvp.filter(
     status rsvp.reservation_status,
     cursor bigint DEFAULT NULL,
     is_desc bool DEFAULT FALSE,
-    page_size integer DEFAULT 10
+    page_size bigint DEFAULT 10
 ) RETURNS TABLE (LIKE rsvp.reservation) AS $$
 DECLARE
     _sql text;

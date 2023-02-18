@@ -13,27 +13,17 @@ fn main() {
         ])
         .with_builder_into(
             "reservation.ReservationQuery",
-            &[
-                "resource_id",
-                "user_id",
-                "status",
-                "page",
-                "page_size",
-                "desc",
-            ],
+            &["resource_id", "user_id", "status", "page", "desc"],
         )
         .with_builder_into(
             "reservation.ReservationFilter",
-            &[
-                "resource_id",
-                "user_id",
-                "status",
-                "cursor",
-                "page_size",
-                "desc",
-            ],
+            &["resource_id", "user_id", "status", "cursor", "desc"],
         )
         .with_builder_option("reservation.ReservationQuery", &["start", "end"])
+        .with_field_attributes(
+            &["page_size"],
+            &["#[builder(setter(into), default = \"10\")]"],
+        )
         .compile(&["protos/reservation.proto"], &["protos"])
         .unwrap();
     Command::new("cargo").args(["fmt"]).output().unwrap();
@@ -46,6 +36,7 @@ trait BuilderExt {
     fn with_builder(self, paths: &[&str]) -> Self;
     fn with_builder_into(self, path: &str, fields: &[&str]) -> Self;
     fn with_builder_option(self, path: &str, fields: &[&str]) -> Self;
+    fn with_field_attributes(self, fields: &[&str], attr: &[&str]) -> Self;
 }
 
 impl BuilderExt for Builder {
@@ -74,8 +65,16 @@ impl BuilderExt for Builder {
         fields.iter().fold(self, |acc, field| {
             acc.field_attribute(
                 format!("{path}.{field}"),
-                "#[builder(setter(into, strip_option))]",
+                "#[builder(setter(into, strip_option), default)]",
             )
+        })
+    }
+
+    fn with_field_attributes(self, paths: &[&str], attributes: &[&str]) -> Self {
+        let attribute = attributes.join("\n");
+
+        paths.iter().fold(self, |builder, path| {
+            builder.field_attribute(path, attribute.as_str())
         })
     }
 }
