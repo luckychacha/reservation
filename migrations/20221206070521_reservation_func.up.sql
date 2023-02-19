@@ -14,7 +14,7 @@ BEGIN
     _during := tstzrange(
         COALESCE(_start, '-infinity'),
         COALESCE(_end, 'infinity'),
-        '[)]'
+        '[)'
     );
     -- format the query based on parameters
     -- quote_literal 可以防注入，让输入的字符串按照字符串做处理（转义）
