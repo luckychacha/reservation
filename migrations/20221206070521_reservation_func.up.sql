@@ -11,7 +11,7 @@ DECLARE
     _sql text;
 BEGIN
     -- if start or end is null, use infinity
-    _during := tzrange(
+    _during := tstzrange(
         COALESCE(_start, '-infinity'),
         COALESCE(_end, 'infinity'),
         '[)]'
