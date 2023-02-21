@@ -34,6 +34,15 @@ pub enum Error {
     #[error("Invalid resource id: {0}")]
     InvalidResourceId(String),
 
+    #[error("Invalid page size :{0}")]
+    InvalidPageSize(i64),
+
+    #[error("Invalid cursor :{0}")]
+    InvalidCursor(i64),
+
+    #[error("Invalid status: {0}")]
+    InvalidStatus(i32),
+
     #[error("unknown error")]
     Unknown,
 }
@@ -41,9 +50,12 @@ pub enum Error {
 impl From<Error> for Status {
     fn from(e: Error) -> Self {
         match e {
-            Error::DbError(_) | Error::ConfigReadError | Error::ConfigParseError => {
-                Status::internal(e.to_string())
-            }
+            Error::DbError(_)
+            | Error::ConfigReadError
+            | Error::ConfigParseError
+            | Error::InvalidPageSize(_)
+            | Error::InvalidStatus(_)
+            | Error::InvalidCursor(_) => Status::internal(e.to_string()),
             Error::ConflictReservation(_)
             | Error::ReservationNotFound
             | Error::InvalidReservationId(_)

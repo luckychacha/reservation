@@ -136,6 +136,7 @@ pub struct QueryRequest {
 }
 /// query reservations, order by reservation id
 #[derive(derive_builder::Builder)]
+#[builder(build_fn(name = "private_build"))]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReservationFilter {
@@ -152,7 +153,7 @@ pub struct ReservationFilter {
     #[builder(setter(into), default)]
     pub status: i32,
     #[prost(int64, optional, tag = "4")]
-    #[builder(setter(into), default)]
+    #[builder(setter(into, strip_option), default)]
     pub cursor: ::core::option::Option<i64>,
     /// page size for the query
     #[prost(int64, tag = "5")]

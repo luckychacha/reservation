@@ -17,12 +17,17 @@ fn main() {
         )
         .with_builder_into(
             "reservation.ReservationFilter",
-            &["resource_id", "user_id", "status", "cursor", "desc"],
+            &["resource_id", "user_id", "status", "desc"],
         )
+        .with_builder_option("reservation.ReservationFilter", &["cursor"])
         .with_builder_option("reservation.ReservationQuery", &["start", "end"])
         .with_field_attributes(
             &["page_size"],
             &["#[builder(setter(into), default = \"10\")]"],
+        )
+        .with_type_attributes(
+            &["reservation.ReservationFilter"],
+            &[r#"#[builder(build_fn(name = "private_build"))]"#],
         )
         .compile(&["protos/reservation.proto"], &["protos"])
         .unwrap();
@@ -37,6 +42,7 @@ trait BuilderExt {
     fn with_builder_into(self, path: &str, fields: &[&str]) -> Self;
     fn with_builder_option(self, path: &str, fields: &[&str]) -> Self;
     fn with_field_attributes(self, fields: &[&str], attr: &[&str]) -> Self;
+    fn with_type_attributes(self, paths: &[&str], attributes: &[&str]) -> Self;
 }
 
 impl BuilderExt for Builder {
@@ -75,6 +81,14 @@ impl BuilderExt for Builder {
 
         paths.iter().fold(self, |builder, path| {
             builder.field_attribute(path, attribute.as_str())
+        })
+    }
+
+    fn with_type_attributes(self, paths: &[&str], attributes: &[&str]) -> Self {
+        let attr = attributes.join("\n");
+
+        paths.iter().fold(self, |builder, ty| {
+            builder.type_attribute(ty, attr.as_str())
         })
     }
 }

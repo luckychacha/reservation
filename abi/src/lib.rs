@@ -19,6 +19,20 @@ pub trait Validator {
     fn validate(&self) -> Result<(), Error>;
 }
 
+pub trait Normalizer: Validator {
+    fn normalize(&mut self) -> Result<(), Error> {
+        self.validate()?;
+        self.do_normalize();
+        Ok(())
+    }
+
+    fn do_normalize(&mut self);
+}
+
+pub trait ToSql {
+    fn to_sql(&self) -> Result<String, Error>;
+}
+
 /// database equivalent of the "resevation_status" enum.
 #[derive(Debug, sqlx::Type)]
 #[sqlx(type_name = "reservation_status", rename_all = "lowercase")]

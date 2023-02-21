@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::StreamExt;
 use luckychacha_reservation_abi::{
-    convert_to_utc_time, DbConfig, FilterPager, Reservation, Validator,
+    convert_to_utc_time, DbConfig, FilterPager, Normalizer, Reservation, ToSql, Validator,
 };
 use sqlx::{
     postgres::{types::PgRange, PgPoolOptions},
@@ -167,61 +167,17 @@ impl Rsvp for ReservationManager {
 
     async fn filter(
         &self,
-        filter: luckychacha_reservation_abi::ReservationFilter,
+        mut filter: luckychacha_reservation_abi::ReservationFilter,
     ) -> Result<
         (FilterPager, Vec<luckychacha_reservation_abi::Reservation>),
         luckychacha_reservation_abi::Error,
     > {
-        let user_id = str_to_option(&filter.user_id);
-        let resource_id = str_to_option(&filter.resource_id);
-        let status = luckychacha_reservation_abi::ReservationStatus::from_i32(filter.status)
-            .unwrap_or(luckychacha_reservation_abi::ReservationStatus::Pending);
-
-        let page_size = if filter.page_size < 10 || filter.page_size > 100 {
-            10
-        } else {
-            filter.page_size
-        };
-        let rsvp_rows: Vec<Reservation> = sqlx::query_as(
-            "SELECT * FROM rsvp.filter($1, $2, $3::rsvp.reservation_status, $4, $5, $6)",
-        )
-        .bind(user_id)
-        .bind(resource_id)
-        .bind(status.to_string())
-        .bind(filter.cursor)
-        .bind(filter.desc)
-        .bind(page_size)
-        .fetch_all(&self.pool)
-        .await?;
-
-        let has_prev = !rsvp_rows.is_empty() && Some(rsvp_rows[0].id) == filter.cursor;
-        let start = if has_prev { 1 } else { 0 };
-
-        let has_next = !rsvp_rows.is_empty() && rsvp_rows.len() - start > page_size as usize;
-        let end = if has_next {
-            rsvp_rows.len() - 1
-        } else {
-            rsvp_rows.len()
-        };
-
-        let next = if has_next {
-            Some(rsvp_rows[end - 1].id)
-        } else {
-            None
-        };
-        let prev = if has_prev {
-            Some(rsvp_rows[0].id)
-        } else {
-            None
-        };
-        let result = rsvp_rows[start..end].to_vec();
-        let pager = FilterPager {
-            next,
-            prev,
-            // TODO: How to get total efficiently?
-            total: Some(0),
-        };
-        Ok((pager, result))
+        filter.normalize()?;
+        let sql = filter.to_sql()?;
+        let rsvps = sqlx::query_as(&sql).fetch_all(&self.pool).await?;
+        let mut rsvps = rsvps.into_iter().collect();
+        let pager = filter.get_pager(&mut rsvps)?;
+        Ok((pager, rsvps.into_iter().collect()))
     }
 }
 
@@ -241,13 +197,13 @@ impl ReservationManager {
     }
 }
 
-fn str_to_option(s: &str) -> Option<&str> {
-    if s.is_empty() {
-        None
-    } else {
-        Some(s)
-    }
-}
+// fn str_to_option(s: &str) -> Option<&str> {
+//     if s.is_empty() {
+//         None
+//     } else {
+//         Some(s)
+//     }
+// }
 
 fn string_to_option(s: &str) -> Option<String> {
     if s.is_empty() {
