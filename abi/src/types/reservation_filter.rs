@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
 use crate::{
-    Error, FilterPager, Normalizer, Reservation, ReservationFilter, ReservationFilterBuilder,
-    ReservationStatus, ToSql, Validator,
+    pager::Id, Error, FilterPager, Normalizer, Reservation, ReservationFilter,
+    ReservationFilterBuilder, ReservationStatus, ToSql, Validator,
 };
 
 impl ReservationFilterBuilder {
@@ -49,8 +49,8 @@ impl ReservationFilter {
         let end = if has_next { data.pop_back() } else { None };
 
         let pager = FilterPager {
-            prev: start.map(|r| r.id),
-            next: end.map(|r| r.id),
+            prev: start.map(|r| r.id()),
+            next: end.map(|r| r.id()),
             total: None,
         };
 

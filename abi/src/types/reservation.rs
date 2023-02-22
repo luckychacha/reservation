@@ -1,4 +1,6 @@
-use crate::{convert_to_timestamp, Error, Reservation, ReservationStatus, RsvpStatus, Validator};
+use crate::{
+    convert_to_timestamp, pager::Id, Error, Reservation, ReservationStatus, RsvpStatus, Validator,
+};
 use chrono::{DateTime, FixedOffset, Utc};
 use sqlx::{
     postgres::{types::PgRange, PgRow},
@@ -69,6 +71,12 @@ impl FromRow<'_, PgRow> for Reservation {
             end: Some(convert_to_timestamp(end)),
             note: row.get("note"),
         })
+    }
+}
+
+impl Id for Reservation {
+    fn id(&self) -> i64 {
+        self.id
     }
 }
 
