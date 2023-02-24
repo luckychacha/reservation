@@ -61,3 +61,44 @@ impl Paginator for PageInfo {
         }
     }
 }
+
+#[cfg(test)]
+pub mod pager_test_utils {
+    use std::collections::VecDeque;
+
+    use super::Id;
+
+    pub struct TestId(i64);
+
+    pub fn generate_test_ids(start: i64, end: i64) -> VecDeque<TestId> {
+        (start..=end).map(TestId).collect()
+    }
+
+    // pub fn generate_test_ids_2(start: i64, end: i64) -> VecDeque<TestId> {
+    //     (start..=end).map(|i| TestId(i)).collect()
+    // }
+
+    impl Id for TestId {
+        fn id(&self) -> i64 {
+            self.0
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn paginator_should_work() {
+        let page = PageInfo {
+            cursor: None,
+            page_size: 10,
+            desc: false,
+        };
+
+        let mut items = pager_test_utils::generate_test_ids(1, 11);
+        let pager = page.get_pager(&mut items);
+        assert!(pager.prev.is_none());
+    }
+}
