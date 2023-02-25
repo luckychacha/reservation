@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 
 use crate::{
-    pager::Id, Error, FilterPager, Normalizer, Reservation, ReservationFilter,
-    ReservationFilterBuilder, ReservationStatus, ToSql, Validator,
+    pager::{PageInfo, Pager, Paginator},
+    Error, FilterPager, Normalizer, Reservation, ReservationFilter, ReservationFilterBuilder,
+    ReservationStatus, ToSql, Validator,
 };
 
 impl ReservationFilterBuilder {
@@ -40,21 +41,39 @@ impl Normalizer for ReservationFilter {
     }
 }
 
+impl From<Pager> for FilterPager {
+    fn from(value: Pager) -> Self {
+        Self {
+            prev: value.prev,
+            next: value.next,
+            total: value.total,
+        }
+    }
+}
+
+impl From<&FilterPager> for Pager {
+    fn from(pager: &FilterPager) -> Self {
+        Self {
+            prev: pager.prev,
+            next: pager.next,
+            total: pager.total,
+        }
+    }
+}
+
 impl ReservationFilter {
-    pub fn get_pager(&self, data: &mut VecDeque<Reservation>) -> Result<FilterPager, Error> {
-        let has_prev = self.cursor.is_some();
-        let start = if has_prev { data.pop_front() } else { None };
+    fn page_info(&self) -> PageInfo {
+        PageInfo {
+            cursor: self.cursor,
+            page_size: self.page_size,
+            desc: self.desc,
+        }
+    }
 
-        let has_next = data.len() as i64 > self.page_size;
-        let end = if has_next { data.pop_back() } else { None };
-
-        let pager = FilterPager {
-            prev: start.map(|r| r.id()),
-            next: end.map(|r| r.id()),
-            total: None,
-        };
-
-        Ok(pager)
+    pub fn get_pager(&self, data: &mut VecDeque<Reservation>) -> FilterPager {
+        let page_info = self.page_info();
+        let pager = page_info.get_pager(data);
+        pager.into()
     }
 
     pub fn get_cursor(&self) -> i64 {
@@ -63,6 +82,20 @@ impl ReservationFilter {
 
     pub fn get_status(&self) -> ReservationStatus {
         ReservationStatus::from_i32(self.status).unwrap()
+    }
+
+    pub fn next_page(&self, pager: &FilterPager) -> Option<Self> {
+        let page_info = self.page_info();
+        let next_page_info = page_info.next_page(&pager.into());
+
+        next_page_info.map(|page_info| Self {
+            resource_id: self.resource_id.clone(),
+            user_id: self.user_id.clone(),
+            status: self.status,
+            cursor: page_info.cursor,
+            page_size: page_info.page_size,
+            desc: page_info.desc,
+        })
     }
 }
 

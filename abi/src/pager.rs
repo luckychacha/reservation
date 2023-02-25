@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+#[derive(Debug)]
 pub struct PageInfo {
     pub cursor: Option<i64>,
     pub page_size: i64,
@@ -14,8 +15,8 @@ pub struct Pager {
 
 pub trait Paginator: Sized {
     fn get_pager<T: Id>(&self, data: &mut VecDeque<T>) -> Pager;
-    fn prev_page(&self, pager: Pager) -> Option<Self>;
-    fn next_page(&self, pager: Pager) -> Option<Self>;
+    fn prev_page(&self, pager: &Pager) -> Option<Self>;
+    fn next_page(&self, pager: &Pager) -> Option<Self>;
 }
 
 pub trait Id {
@@ -25,19 +26,30 @@ pub trait Id {
 impl Paginator for PageInfo {
     fn get_pager<T: Id>(&self, data: &mut VecDeque<T>) -> Pager {
         let has_prev = self.cursor.is_some();
-        let start = if has_prev { data.pop_front() } else { None };
+        let prev = if has_prev {
+            data.pop_front();
+            data.front().map(|v| v.id())
+        } else {
+            None
+        };
 
         let has_next = data.len() as i64 > self.page_size;
-        let end = if has_next { data.pop_back() } else { None };
+        let next = if has_next {
+            data.pop_back();
+            data.back().map(|v| v.id())
+        } else {
+            None
+        };
 
         Pager {
-            prev: start.map(|r| r.id()),
-            next: end.map(|r| r.id()),
+            prev,
+            next,
             total: None,
         }
     }
 
-    fn prev_page(&self, pager: Pager) -> Option<Self> {
+    // todo: It is not correct.
+    fn prev_page(&self, pager: &Pager) -> Option<Self> {
         if pager.prev.is_some() {
             Some(PageInfo {
                 cursor: pager.prev,
@@ -49,7 +61,7 @@ impl Paginator for PageInfo {
         }
     }
 
-    fn next_page(&self, pager: Pager) -> Option<Self> {
+    fn next_page(&self, pager: &Pager) -> Option<Self> {
         if pager.next.is_some() {
             Some(PageInfo {
                 cursor: pager.next,
@@ -100,5 +112,27 @@ mod tests {
         let mut items = pager_test_utils::generate_test_ids(1, 11);
         let pager = page.get_pager(&mut items);
         assert!(pager.prev.is_none());
+        assert_eq!(pager.next, Some(10));
+
+        let prev = page.prev_page(&pager);
+        assert!(prev.is_none());
+
+        // second page
+        let page = page.next_page(&pager).unwrap();
+        println!("{page:?}");
+        let pager = page.get_pager(&mut pager_test_utils::generate_test_ids(10, 21));
+        assert_eq!(pager.prev, Some(11));
+        assert_eq!(pager.next, Some(20));
+
+        // third page
+        let page = page.next_page(&pager).unwrap();
+        let pager = page.get_pager(&mut pager_test_utils::generate_test_ids(20, 25));
+        assert!(pager.next.is_none());
+        assert_eq!(pager.prev, Some(21));
+
+        {
+            let prev_page = page.prev_page(&pager);
+            assert_eq!(prev_page.unwrap().cursor, Some(21));
+        }
     }
 }

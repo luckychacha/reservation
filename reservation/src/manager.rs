@@ -176,7 +176,7 @@ impl Rsvp for ReservationManager {
         let sql = filter.to_sql()?;
         let rsvps = sqlx::query_as(&sql).fetch_all(&self.pool).await?;
         let mut rsvps = rsvps.into_iter().collect();
-        let pager = filter.get_pager(&mut rsvps)?;
+        let pager = filter.get_pager(&mut rsvps);
         Ok((pager, rsvps.into_iter().collect()))
     }
 }
