@@ -173,7 +173,7 @@ impl Rsvp for ReservationManager {
         luckychacha_reservation_abi::Error,
     > {
         filter.normalize()?;
-        let sql = filter.to_sql()?;
+        let sql = filter.to_sql();
         let rsvps = sqlx::query_as(&sql).fetch_all(&self.pool).await?;
         let mut rsvps = rsvps.into_iter().collect();
         let pager = filter.get_pager(&mut rsvps);

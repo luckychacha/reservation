@@ -1,9 +1,9 @@
 use std::collections::VecDeque;
 
 use crate::{
-    pager::{PageInfo, Pager, Paginator},
-    Error, FilterPager, Normalizer, Reservation, ReservationFilter, ReservationFilterBuilder,
-    ReservationStatus, ToSql, Validator,
+    pager::{Id, PageInfo, Pager, Paginator},
+    Error, FilterPager, Normalizer, ReservationFilter, ReservationFilterBuilder, ReservationStatus,
+    ToSql, Validator,
 };
 
 impl ReservationFilterBuilder {
@@ -70,7 +70,7 @@ impl ReservationFilter {
         }
     }
 
-    pub fn get_pager(&self, data: &mut VecDeque<Reservation>) -> FilterPager {
+    pub fn get_pager<T: Id>(&self, data: &mut VecDeque<T>) -> FilterPager {
         let page_info = self.page_info();
         let pager = page_info.get_pager(data);
         pager.into()
@@ -100,7 +100,7 @@ impl ReservationFilter {
 }
 
 impl ToSql for ReservationFilter {
-    fn to_sql(&self) -> Result<String, Error> {
+    fn to_sql(&self) -> String {
         let middle_plus = if self.cursor.is_none() { 0 } else { 1 };
 
         let mut sql = format!(
@@ -131,14 +131,14 @@ impl ToSql for ReservationFilter {
             self.page_size + 1 + middle_plus
         ));
 
-        Ok(sql)
+        sql
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ReservationFilterBuilder;
+    use crate::{pager::pager_test_utils::generate_test_ids, ReservationFilterBuilder};
 
     #[test]
     fn filter_should_generate_correct_sql() {
@@ -146,13 +146,13 @@ mod tests {
             .user_id("luckychacha-id")
             .build()
             .unwrap();
-        let sql = filter.to_sql().unwrap();
+        let sql = filter.to_sql();
         assert_eq!(sql, "SELECT * FROM rsvp.reservation WHERE status='pending'::rsvp.reservation_status AND id >= 0 AND user_id = 'luckychacha-id' ORDER BY id ASC LIMIT 11");
         let filter = ReservationFilterBuilder::default()
             .resource_id("test-r-id")
             .build()
             .unwrap();
-        let sql = filter.to_sql().unwrap();
+        let sql = filter.to_sql();
         assert_eq!(sql, "SELECT * FROM rsvp.reservation WHERE status='pending'::rsvp.reservation_status AND id >= 0 AND resource_id = 'test-r-id' ORDER BY id ASC LIMIT 11");
 
         let filter = ReservationFilterBuilder::default()
@@ -160,14 +160,14 @@ mod tests {
             .user_id("luckychacha-id")
             .build()
             .unwrap();
-        let sql = filter.to_sql().unwrap();
+        let sql = filter.to_sql();
         assert_eq!(sql, "SELECT * FROM rsvp.reservation WHERE status='pending'::rsvp.reservation_status AND id >= 0 AND user_id = 'luckychacha-id' AND resource_id = 'test-r-id' ORDER BY id ASC LIMIT 11");
 
         let filter = ReservationFilterBuilder::default()
             .desc(true)
             .build()
             .unwrap();
-        let sql = filter.to_sql().unwrap();
+        let sql = filter.to_sql();
         assert_eq!(sql, "SELECT * FROM rsvp.reservation WHERE status='pending'::rsvp.reservation_status AND id <= 9223372036854775807 AND TRUE ORDER BY id DESC LIMIT 11");
 
         let filter = ReservationFilterBuilder::default()
@@ -175,7 +175,7 @@ mod tests {
             .user_id("luckychacha-id")
             .build()
             .unwrap();
-        let sql = filter.to_sql().unwrap();
+        let sql = filter.to_sql();
         assert_eq!(sql, "SELECT * FROM rsvp.reservation WHERE status='pending'::rsvp.reservation_status AND id >= 10 AND user_id = 'luckychacha-id' ORDER BY id ASC LIMIT 12");
 
         let filter = ReservationFilterBuilder::default()
@@ -184,7 +184,31 @@ mod tests {
             .desc(true)
             .build()
             .unwrap();
-        let sql = filter.to_sql().unwrap();
+        let sql = filter.to_sql();
         assert_eq!(sql, "SELECT * FROM rsvp.reservation WHERE status='pending'::rsvp.reservation_status AND id <= 100 AND user_id = 'test-r-id' ORDER BY id DESC LIMIT 12");
+    }
+
+    #[test]
+    fn filter_with_pager_should_generate_correct_sql() {
+        let filter = ReservationFilterBuilder::default()
+            .resource_id("router-1")
+            .build()
+            .unwrap();
+        let mut data = generate_test_ids(1, 11);
+        let pager = filter.get_pager(&mut data);
+        assert_eq!(pager.prev, None);
+        assert_eq!(pager.next, Some(10));
+
+        let filter = filter.next_page(&pager).unwrap();
+        let sql = filter.to_sql();
+        assert_eq!(
+            sql,
+            "SELECT * FROM rsvp.reservation WHERE status='pending'::rsvp.reservation_status AND id >= 10 AND resource_id = 'router-1' ORDER BY id ASC LIMIT 12"
+        );
+
+        let mut data = generate_test_ids(10, 20);
+        let pager = filter.get_pager(&mut data);
+        assert_eq!(pager.prev, Some(11));
+        assert_eq!(pager.next, None);
     }
 }
