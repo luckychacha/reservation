@@ -4,8 +4,8 @@ use crate::test_utils::TestConfig;
 
 use futures::StreamExt;
 use luckychacha_reservation_abi::{
-    reservation_service_client::ReservationServiceClient, Config, QueryRequest, Reservation,
-    ReservationQueryBuilder, ReserveRequest,
+    reservation_service_client::ReservationServiceClient, Config, FilterRequest, FilterResponse,
+    QueryRequest, Reservation, ReservationFilterBuilder, ReservationQueryBuilder, ReserveRequest,
 };
 use luckychacha_reservation_service::start_server;
 use std::time::Duration;
@@ -58,7 +58,7 @@ async fn grpc_query_should_work() {
     let tconfig = TestConfig::with_server_port(50001);
     let mut client = get_test_client(&tconfig).await;
 
-    // 1.make another 100 reservation.
+    // 1.make some reservations.
     make_reservations(&mut client, 100).await;
 
     let query = ReservationQueryBuilder::default()
@@ -74,6 +74,52 @@ async fn grpc_query_should_work() {
     while let Some(Ok(ret)) = ret.next().await {
         assert_eq!(ret.user_id, "luckychacha-id");
     }
+}
+
+#[tokio::test]
+async fn grpc_filter_should_work() {
+    let config = TestConfig::with_server_port(50002);
+    let mut client = get_test_client(&config).await;
+
+    // 1.make some reservations
+    make_reservations(&mut client, 25).await;
+
+    let filter = ReservationFilterBuilder::default()
+        .user_id("luckychacha-id")
+        .build()
+        .unwrap();
+
+    let FilterResponse {
+        reservations,
+        pager,
+    } = client
+        .filter(FilterRequest::new(filter.clone()))
+        .await
+        .unwrap()
+        .into_inner();
+
+    let pager = pager.unwrap();
+    assert_eq!(pager.next, Some(filter.page_size));
+    assert_eq!(pager.prev, None);
+    assert_eq!(pager.total, None);
+    assert_eq!(reservations.len(), filter.page_size as usize);
+
+    let filter = filter.next_page(&pager).unwrap();
+    // then we get next page
+    let FilterResponse {
+        pager,
+        reservations,
+    } = client
+        .filter(FilterRequest::new(filter.clone()))
+        .await
+        .unwrap()
+        .into_inner();
+
+    let pager = pager.unwrap();
+
+    assert_eq!(pager.next, filter.cursor.map(|v| v + filter.page_size));
+    assert_eq!(pager.prev, filter.cursor.map(|v| v + 1));
+    assert_eq!(reservations.len(), filter.page_size as usize);
 }
 
 async fn get_test_client(config: &Config) -> ReservationServiceClient<Channel> {
